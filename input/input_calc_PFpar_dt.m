@@ -177,9 +177,12 @@ function IEinit = determineIEinit(IE_phases,model,intf,in)
                 minIE = min([minIEaniso, intf.IE_phases(~intf.is_incl_dep_IE)]);
                 IEminmax =  [minIE, maxIE];
                 % minimal and maximal IE of the system needed
-                IEinit = determineIEinit_varIW(IEminmax);
             end % PF par computation specification
+            
+        else
+            IEminmax =  [min([intf.IE_phases]), max([intf.IE_phases])];
         end % if inclination dep
+        IEinit = determineIEinit_varIW(IEminmax);
         
     elseif strcmp(model,'IWvK')
         % taking mean IE to compute mean PF parameters
