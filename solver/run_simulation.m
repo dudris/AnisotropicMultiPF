@@ -1,10 +1,4 @@
-function [pctr,c,S,F,in] = Multip_aniso_conc(in)
-%% assertions
-
- % assert(in.is_conc_conserved,'in.is_conc_conserved = false, this function is not usable')
-% assert(~in.isLaniso,'in.isLaniso = true, this function cannot handle that')
-assert(~in.all_expr_anal,'in.all_expr_anal = true, this function cannot handle that. Current implementation of analytic expressions is only valid for 2 PFs.')
-% assert(in.is_with_constant_IW,'Inconvenient input: in.is_with_constant_IW = false but launched Multip_aniso_conc')
+function [pctr,S,F,in] = run_simulation(in)
 
 %% PrintSimulationSpecification
 PrintSimulationSpecification(in)
@@ -18,8 +12,6 @@ end
 global gradX gradY gradXX gradYY gradYX lap size2D simsize
 size2D = [in.Ny in.Nx];
 [gradX,gradY,gradXX,gradYY,gradYX,lap,simsize] = calcDifferentialOperators(in);
-% only BCs, for Nspecial BCs one-sized FD, sparse zeros otherwise
-[gradXspBC, gradYspBC] = calcDifferentialOperators_specBC(in);
 
 basic_plotparams.size2D = size2D;
 basic_plotparams.spacing = [in.dx,in.dy];
@@ -31,14 +23,6 @@ else
 end
 x = in.dx*(1:in.Nx);
 y = in.dy*(1:in.Ny);
-[X,Y] = meshgrid(x,y);
-
-th_specBC = AssignTh_SpecBC(in);
-bndry = PrepSpecialBCs(in);
-if strcmp(in.BCs,'Nspecial')
-    normgrad_specBC = struct('bot',[],'top',[],'left',[],'right',[]);
-    kappa = in.kpp0(1); % to initiate, counts with 2 PFs only
-end
 
 for i = 1:in.nOP
     p{i} = reshape(p{i},simsize);
@@ -69,8 +53,8 @@ nnlsq = cell(npairs,1);
 ori = cell(npairs,1); % normal at the interface, phi_ij in Neles paper
 
 sumpsq = zeros(simsize);
-Fdens_combined = cell(2,1);
-Fdens_combined{1} = zeros(simsize);
+% Fdens = cell(2,1);
+Fdens = zeros(simsize);
 
 dkppdGp = cell(in.nOP,1);
 dgmmdGp = cell(in.nOP,1);
@@ -79,28 +63,9 @@ for i = 1:in.nOP
     dgmmdGp{i} = cell(1,ndim);
     for ddim = 1:ndim
         dkppdGp_sumpsqpsq{i}{ddim} = zeros(simsize);
-        dgmmdGp{i}{ddim} = zeros(simsize);
+        dgmmijdGp{i}{ddim} = zeros(simsize);
     end
 end
-
-if in.all_expr_anal
-    doridX  = cell(npairs,1);
-    doridY =  cell(npairs,1);
-    dnndX = cell(npairs,1);
-    dnndY = cell(npairs,1);
-    gradXXp = cell(in.nOP,1);
-    gradYXp = cell(in.nOP,1);
-    gradYYp = cell(in.nOP,1);
-end
-
-anisoKP = cell(npairs,1); 
-danisoKP = cell(npairs,1); 
-ddanisoKP = cell(npairs,1); 
-anisoGM = cell(npairs,1); 
-danisoGM = cell(npairs,1); 
-ddanisoGM = cell(npairs,1); 
-dgmmijdGp = cell(npairs,1); 
-
 
 % model specification - switch structure to 
 models = categorical({'IWc','IWvG','IWvK'})';
@@ -140,7 +105,7 @@ else
     numctrout_all = in.ctrcnt;
 end
 
-F = nan(numctrout_all, 6);
+F = nan(numctrout_all, 2);
 ind_singlePF_IEcalc = get_ind_singlePF_calcIE(in.spec_singlePF_IEcalc,in.nOP);
 S = nan(numctrout_all , in.nOP);
 
@@ -156,7 +121,6 @@ while simulation_proceeds
 % for tstep = Ndtstart:Ndt 
     % ploting condition
     PlotAfter = tstep > in.PlotAftertstep;
-%     plotting = (mod(tstep,in.ctrplot)==0 || tstep ==1 ) && plotcond && tstep>=precycle || PlotAftertstep;
     plotting = ( any(tstep==tctrout_all ) || PlotAfter) && in.plotcond;
 
     basic_plotparams.tstep = tstep;
@@ -171,34 +135,14 @@ while simulation_proceeds
     sumgradpsq = zeros(simsize);
     sumpsqpsq = zeros(simsize);
     
-    %     !!!!!!
-%     if in.is_inclination_dependent 
-%         gradsumgradpsq{1} = zeros(simsize);
-%         gradsumgradpsq{2} = zeros(simsize);
-%         gradsumpsqpsq{1} = zeros(simsize);
-%         gradsumpsqpsq{2} = zeros(simsize);
-%     end
-    
     for i = 1:in.nOP
         sumpsq = sumpsq + p{i}.^2;
         lapp{i} = lap(p{i});
         
-        if strcmp(in.BCs,'Nspecial')
-            % Does nothing when BCs~=Nspecial ; kappa is one tstep behind. 
-            normgrad_specBC = AssignNormgrad_SpecBC(in,p{i},kappa,bndry,normgrad_specBC,i);
-            lapp{i} = ApplySpecialBCs_lap(in,lapp{i},normgrad_specBC,bndry,th_specBC,i);
-        end
-        
-        if is_incl_dep_maincalc || strcmp(in.BCs,'Nspecial') 
+        if is_incl_dep_maincalc
             gp{i}{1} = gradX(p{i});
             gp{i}{2} = gradY(p{i});
             
-            if strcmp(in.BCs,'Nspecial')
-                gp{i} = ApplySpecialBCs_grad(in,gp{i},normgrad_specBC,bndry,th_specBC,i);
-            end
-            
-            %     !!!!!! gradsumpsqpsq not needed always
-%             [sumpsqpsq, gradsumpsqpsq,gradsumgradpsq] = Calc_p_derived_fields_npairs(i,p,gp,sumpsqpsq,gradsumpsqpsq,gradsumgradpsq);
             sumpsqpsq = Calc_sumpsqpsq(i,p,sumpsqpsq);
             
             if in.is_inclination_dependent_IE
@@ -225,23 +169,13 @@ while simulation_proceeds
             DFin.sumgradpsq_mod = sumgradpsq;
             DFin.grad_sumgrad_over_sumpsqpsq{1} = gradX(sumgradpsq);
             DFin.grad_sumgrad_over_sumpsqpsq{2} = gradY(sumgradpsq);
-            
         else
             DFin.sumgradpsq_mod = sumgradpsq./sumpsqpsq;
-    %         gradsumgradpsq{1} = gradX(sumgradpsq);
-    %         gradsumgradpsq{2} = gradY(sumgradpsq);
             DFin.grad_sumgrad_over_sumpsqpsq{1} = gradX(sumgradpsq./sumpsqpsq);
             DFin.grad_sumgrad_over_sumpsqpsq{2} = gradY(sumgradpsq./sumpsqpsq);
-            % addend: if BCs Nspecial, one-sized FD @ boundary, zero otherwise.
-            DFin.grad_sumgrad_over_sumpsqpsq{1} = DFin.grad_sumgrad_over_sumpsqpsq{1} + gradXspBC*(sumgradpsq./sumpsqpsq);
-            DFin.grad_sumgrad_over_sumpsqpsq{2} = DFin.grad_sumgrad_over_sumpsqpsq{2} + gradYspBC*(sumgradpsq./sumpsqpsq);
-    %         grad_sumgrad_over_sumpsqpsq{1} = gradX(sumgradpsq)./sumpsqpsq - sumgradpsq.*gradsumpsqpsq{1}./sumpsqpsq.^2;
-    %         grad_sumgrad_over_sumpsqpsq{2} = gradY(sumgradpsq)./sumpsqpsq - sumgradpsq.*gradsumpsqpsq{2}./sumpsqpsq.^2;
-    %         grad_sumgrad_over_sumpsqpsq{1} = gradsumgradpsq{1}./sumpsqpsq - sumgradpsq.*gradsumpsqpsq{1}./sumpsqpsq.^2;
-    %         grad_sumgrad_over_sumpsqpsq{2} = gradsumgradpsq{2}./sumpsqpsq - sumgradpsq.*gradsumpsqpsq{2}./sumpsqpsq.^2;
         end % if nOP
     end % if incl. dep. IE with aniso kappa
-    %%
+    %% 
     kappa = zeros(simsize);
     gam_sumpsqpsq = zeros(simsize);
     out_interf_all = false(simsize);
@@ -268,27 +202,10 @@ while simulation_proceeds
             
             for ddim = 1:ndim
                 nn{k}{ddim}= ( gp{i}{ddim}-gp{j}{ddim})./nnl{k};
-                
-                if in.all_expr_anal
-                    dnndX{k}{ddim} = zeros(simsize);
-                    dnndY{k}{ddim} = zeros(simsize);
-                end
             end
 
             ori{k} = nan(simsize);
             ori{k}(out_interf_ij) = atan2(nn{k}{2}(out_interf_ij),nn{k}{1}(out_interf_ij));
-%             plot2D_single_field(ori{k}*180/pi,'ori',size2D)
-%     
-%             i = 1;
-%             plot2D_single_field(atan2(gp{i}{2},gp{i}{1})*180/pi,'ori',size2D)
-%             
-%             i = 2; figure(2)
-%             quiver(reshape(gp{i}{1},size2D),reshape(gp{i}{2},size2D)), axis equal
-            %
-            
-            if in.all_expr_anal
-                [dnndX{k},dnndY{k},doridX{k},doridY{k}] = CalcGradientOfOrientationField(indpairs(k,:),out_interf_ij,nnlsq{k},nnl{k},nn{k},gradXXp,gradYXp,gradYYp);
-            end
             
             [gkL, aniso] = CalcKapGam_aniso(in, modspec, lim_forbb_ang, k, ori{k}, gkL, aniso);
         
@@ -296,20 +213,7 @@ while simulation_proceeds
             inn_interf_all = inn_interf_all | inn_interf_ij;
         end % if isotropic vs aniso
         
-        if modspec.kpp
-            assert(all(~isnan(gkL.k_ij)),['NaN in kpp_ij, k=' num2str(k) ', [i,j] = [' num2str(indpairs(k,:)) '], tstep = ' num2str(tstep)])
-        end
-        if modspec.gam
-            assert(all(~isnan(gkL.g_ij{k})),['NaN in gam_ij, k=' num2str(k) ', [i,j] = [' num2str(indpairs(k,:)) '], tstep = ' num2str(tstep)])
-        end
-        
         [kappa, gam_sumpsqpsq, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam_sumpsqpsq, L, gkL, in, p, i, j, k);
-%         [kappa, gam_sumpsqpsq, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam_sumpsqpsq, L, kpp_ij,gam_ij{k}, in.Lij(k), p, in.nOP, i, j);
-%         plot2D_from_lin_2xn(2,{kappa, gam_sumpsqpsq},{'\kappa','\gamma'},size2D,1,false)
-%         plot2D_from_lin_2xn(2,{kappa./sumpsqpsq, gam_sumpsqpsq./sumpsqpsq},{'\kappa','\gamma'},size2D,1,false)
-        if in.all_expr_anal && is_incl_dep_maincalc
-            gradkpp = CalcGradofkappa_2nOP(in.kpp0(k),danisoKP{k},doridX{k},doridY{k});
-        end
         
     end % for npairs
     
@@ -318,118 +222,14 @@ while simulation_proceeds
             kappa = kappa./sumpsqpsq;
         end
         L = L./sumpsqpsq;
-        
-        % to assure interfaces develop 
-        if tstep < in.precycle && in.is_fixedPF.bool
-            L = max(in.Lij)*ones(simsize);
-        end
     end
         
     if any(is_locaniso_maincalc_IE) && modspec.kpp
         DFin.gradkpp{1} = gradX(kappa);
         DFin.gradkpp{2} = gradY(kappa);
-        % addend: if BCs Nspecial, one-sized FD @ boundary, zero otherwise.
-        DFin.gradkpp{1} = DFin.gradkpp{1} + gradXspBC*(kappa);
-        DFin.gradkpp{2} = DFin.gradkpp{2} + gradYspBC*(kappa);
-        
     end
     
-%%     Cahn-Hilliard eqation
-% % AL=AS
-% h1 ... liquid phase, p{1} always liquid
-    if in.is_conc_conserved && tstep>in.precycle
-        
-        % Grain1 and NonGrain interpolation function 
-        hL = zeros(simsize);
-        for ll = 1:length(in.PF_to_conserve{1})
-            s = in.PF_to_conserve{1}(ll);
-            hL = hL + p{s}.^2;
-        end
-        hL = hL./sumpsq; % liquid interpolation function
-        hS = 1-hL;
-        
-        % Grain2 and NonGrain interpolation function - in case of 2nd conserved PF
-        if in.conserve_2PFs
-            hG = zeros(simsize);
-            for ll = 1:length(in.PF_to_conserve{2})
-                s = in.PF_to_conserve{2}(ll);
-                hG = hG + p{s}.^2./sumpsq;
-            end
-            hG = hG./sumpsq;
-            hNG = 1- hG;
-        else
-            hG = 0;
-            hNG = 0;
-        end
-        
-        if tstep == in.precycle+1 % initialize concentration field
-            c = hL.*in.cLeq + hS.*in.cSeq;
-            cL = (c+hS*(in.cLeq-in.cSeq)); % concenctration in phase a ('Liquid')
-            cS = (cL - in.cLeq)+in.cSeq;  % concentration in phase b ('Solid')
-%             plot2D_single_field(h1,'h1',size2D)
-%             plot2D_single_field(h2,'h2',size2D)
-            if in.conserve_2PFs
-                % in formulas equivalence L-G, S-NG
-                cc = hG.*in.cLeq + hNG.*in.cSeq; %concentration field conserving grain
-                cG = (cc+hNG*(in.cLeq-in.cSeq)); % concenctration in Grain
-                cNG = (cG - in.cLeq)+in.cSeq; % concenctration in Not in Grain
-            end
-        end
-        
-        % derivative of the interpolation function 
-        for ll = 1:in.nOP
-            if any( ll == in.PF_to_conserve{1}) % if PF of the liquid phase (the conserved grain)
-                dhLdp{ll} = 2*p{ll}.*hS./sumpsq;
-            else % if PF of the solid phase (non-grain)
-                dhLdp{ll} = 2*p{ll}.*hL./sumpsq;
-            end
-            
-            if in.conserve_2PFs
-                if any(ll == in.PF_to_conserve{2}) % if PF is the conserved grain
-                    dhGdp{ll} = 2*p{ll}.*hNG./sumpsq;
-                else % if PF is not the conserved grain
-                    dhGdp{ll} = 2*p{ll}.*hG./sumpsq;
-                end
-            end
-        end
-        
-        % phase concentrations
-        % general formula:    cL = (c+hS*(AL/AS*cLeq-cSeq))./(hS*AL/AS + hL); 
-        cL = (c+hS*(in.cLeq-in.cSeq)); % concenctration in phase a ('Liquid')
-        cS = (cL - in.cLeq)+in.cSeq;  % concentration in phase b ('Solid')
-        diffusionPotSL = in.AL*(cS-in.cSeq);   
-        
-        % Cahn-Hilliard equation
-%         RHS_CH = gradX(D.*gradX(diffusionPot)) + gradY(D.*gradY(diffusionPot));
-%         RHS_CH = ( gradX(D).*gradX(diffusionPot) + gradY(D).*gradY(diffusionPot) ) + D.*lap(diffusionPot);
-        RHS_CH1 = in.Mconc_L.*lap(diffusionPotSL);
-        c = c + in.dt*RHS_CH1;
-        
-        % Allen-Cahn DF
-        AC_DF_bulk1 = in.AL*(cS - in.cSeq).^2 - in.AL*(cL - in.cLeq).^2 - diffusionPotSL.*(cS-cL); % fS-fL-diffusionPot.*(cS-cL)        
-        
-        if in.conserve_2PFs
-            % phase concentrations
-            cG = (cc+hNG*(in.cLeq-in.cSeq)); % concenctration in Grain
-            cNG = (cG - in.cLeq)+in.cSeq; % concenctration in Not in Grain
-            diffusionPotGNG = in.AL*(cNG - in.cSeq);
-            
-            % Cahn-Hilliard equation
-            RHS_CH2 = in.Mconc_L.*lap(diffusionPotGNG);
-            cc = cc + in.dt*RHS_CH2;
-            
-            % Allen-Cahn DF
-            AC_DF_bulk2 = in.AL*(cNG - in.cSeq).^2 - in.AL*(cG - in.cLeq).^2 - diffusionPotGNG.*(cNG-cG);
-        else % for compatibility in the AC DF
-            for ll = 1:in.nOP
-                dhGdp{ll} = 0;
-            end
-            AC_DF_bulk2 = 0;
-        end
-        
-    end % if is_conc_conserved
-    
-    %% Allen-cahn
+    %% evolution equation
     
     for i = 1:in.nOP
         
@@ -466,29 +266,11 @@ while simulation_proceeds
                 end % for ddim
             end
                 
-            if ~in.all_expr_anal % numeric derivatives of some fields
-                if modspec.kpp 
-                    % !!!! specBC
-                    DFin.divdkppdGp_mod{i}  = gradX(DFin.dkppdGp_sumpsqpsq{i}{1}) + gradY(DFin.dkppdGp_sumpsqpsq{i}{2});
-                    % addend: if BCs Nspecial, one-sized FD @ boundary, zero otherwise.
-                    DFin.divdkppdGp_mod{i} = DFin.divdkppdGp_mod{i} + gradXspBC*(DFin.dkppdGp_sumpsqpsq{i}{1}) + gradYspBC*(DFin.dkppdGp_sumpsqpsq{i}{2}) ;
-                end
-            else % in.all_expr_anal
-                % these are not multiplied by kpp0(k) so they can be used in weak aniso approx
-                [gradXdkppdijGp, gradYdkppdijGp] = CalcXYDivTermsGderVecFields(nnlsq{k},nnl{k},danisoKP{k},nn{k},ddanisoKP{k},doridX{k},dnndX{k},doridY{k},dnndY{k});
-                if in.intf.isStrongAniso
-                    [gradXdgmmdijGp, gradYdgmmijdGp] = CalcXYDivTermsGderVecFields(nnlsq{k},nnl{k},danisoGM{k},nn{k},ddanisoGM{k},doridX{k},dnndX{k},doridY{k},dnndY{k});
-                    gradXdgmmdijGp = in.gam0(k)*gradXdgmmdijGp;
-                    gradYdgmmijdGp = in.gam0(k)*gradYdgmmijdGp;
-                else 
-                    [gradXdgmmdijGp, gradYdgmmijdGp] = CalcXYDivGderGamma_weak(gradXdkppdijGp,gradYdkppdijGp,in.A(k),anisoKP{k},danisoKP{k},dkppdGp{i},doridX{k},doridY{k});
-                end
-                [divdkppdGp{i}, divdgmmdGp{i}] = CalcDivergenceOfGderVecFields_2nOP(prefactor,condBeforeDF,in.kpp0(k),gradXdkppdijGp, gradYdkppdijGp,gradXdgmmdijGp, gradYdgmmijdGp);
-            end
-            
             if modspec.kpp 
+                DFin.divdkppdGp_mod{i}  = gradX(DFin.dkppdGp_sumpsqpsq{i}{1}) + gradY(DFin.dkppdGp_sumpsqpsq{i}{2});
                 DFin.divdkppdGp_mod{i}(isnan(DFin.divdkppdGp_mod{i})) = 0;
             end
+            
         end %if is_incl_dep_maincalc
         
         if modspec.gam
@@ -522,111 +304,81 @@ while simulation_proceeds
             sumgam_ij_psq_i = 1.5*(sumpsq - p{i}.^2);
         end % if modspec.gam
         
-%         plot2D_single_field(sumgam_ij_psq_i.*p{i}.^2,'\Sigma \gamma_{i,j}p_i^2p_j^2',size2D)    
-%         plot2D_single_field(sumgam_ij_psq_i,'\Sigma \gamma_{i,j}p_j^2',size2D)    
     %% new timestep value calculation
-        condIntoDF = inn_interf_all;
-%         if strcmp(in.BCs,'Nspecial')
-%             condIntoDF(bndry.top | bndry.bot) = false;
-%         end
-        
         [df0dp{i} , DFlapp{i}] = CalcDrivingForceTerms_Isotropic(p{i}, in.m, sumgam_ij_psq_i, kappa,lapp{i});
 
         df0dGp{i} = DFlapp{i};
         if any(is_locaniso_maincalc_IE)
+            condIntoDF = inn_interf_all;
             normgp_i = sqrt(gp{i}{1}.^2+gp{i}{2}.^2); % to strictly limit DF to interfaces of p{i} only
             condIntoDF = inn_interf_all & (normgp_i >= in.intf.limval.aniso.inner/(2*in.dx));
             
             [DFdivG{i} , DFvG{i} , DFdivK{i} ,  DFvK{i} , DFgK{i}] = CalcDrivingForceTerms_Anisotropic(condIntoDF,in.m, p{i}, gp{i}, DFin,modspec,i);
-%             [DFdivG{i} , DFvG{i} , DFdivK{i} ,  DFvK{i} , DFgK{i}] = CalcDrivingForceTerms_Anisotropic(condIntoDF,in.m, p{i},sumdgamdGp_ij_vec_i,sumdgamdGp_ij_vecdotpr_i, sumdgamdGp_ij_div_i, ...
-%                     sumgradpsq_mod, divdkppdGp_mod{i}, grad_sumgrad_over_sumpsqpsq,dkppdGp_sumpsqpsq{i}, gp{i},gradkpp);
             df0dGp{i} = df0dGp{i} + DFvG{i} + DFdivG{i} + DFdivK{i}+ DFvK{i} + DFgK{i}; % DFlapp{i} is already in df0dGp{i} 
         end % if is_isotropic
          
-        if tstep<=in.precycle || in.is_conserved
-            p_new{i} = p{i} - in.dt*L.*(df0dp{i} - df0dGp{i});
-                % counts with vector, summing in 1 direction only. Possible because of equidistant grid in x and y
-%                 dinterp_p_i = 6 *(p{i} - p{i}.^2);% derivative of x.^2*(3-2*x);
+        p_new{i} = p{i} - in.dt*L.*(df0dp{i} - df0dGp{i});
+        if tstep<=in.precycle % area conserved using Lagrange-multipliers approach
             dinterpf_i = dinterpf(p,i,sumpsq);
             redistr_antiforce(i) = - sum(df0dp{i} - df0dGp{i})/sum(dinterpf_i);
             p_new{i} = p_new{i} - in.dt.*L.*redistr_antiforce(i).*dinterpf_i;
-        elseif in.is_conc_conserved 
-            p_new{i} = p{i} - in.dt.*L.*(df0dp{i} - df0dGp{i}) - in.dt*L.*( - in.pref_GP_diff(i,1)*dhLdp{i}.*AC_DF_bulk1 - in.pref_GP_diff(i,2)*dhGdp{i}.*AC_DF_bulk2);  
-        elseif ~in.is_conc_conserved
-            p_new{i} = p{i} - in.dt*L.*(df0dp{i} - df0dGp{i});
         end % if tstep<=precycle 
         
         % add ith term to energy calculation at checkpoint
         if any(tstep==tctrout_all)
             if i == 1
-                Fdens_combined{1} = zeros(simsize);
+                Fdens = zeros(simsize);
             end
             
             if any(is_locaniso_maincalc_IE)
                 % sumgradpsq calculated in each tstep for driving force
-                Fdens_combined{1} = Fdens_combined{1} + in.m*(0.25*p_new{i}.^4 - 0.5*p_new{i}.^2);
+                Fdens = Fdens + in.m*(0.25*p_new{i}.^4 - 0.5*p_new{i}.^2);
             else
                 % sumgradpsq not calculated yet
                 % in case of specBC and need for longer precycle modify
                 sumgradpsq = sumgradpsq + ( gradX(p_new{i}).^2 + gradY(p_new{i}).^2 );
-                Fdens_combined{1} = Fdens_combined{1} + in.m*(0.25*p_new{i}.^4 - 0.5*p_new{i}.^2);
-                end
+                Fdens = Fdens + in.m*(0.25*p_new{i}.^4 - 0.5*p_new{i}.^2);
+            end
         end
         
-    %% feedback on the evolution
-%         if any(~is_isotropic)
-%             if soaIE == 0
-%                 CheckAnistropicTermsAreZero(DFdivG{i},DFvG{i},DFdivK{i},DFvK{i},DFgK{i},i,tstep)
-%             end
-%         end 
-        
-        if in.dispDFdetailscond && (tstep > in.precycle)
-            PrintDrivingForces(in.dt,L,df0dp{i},DFlapp{i},DFdivG{i},DFvG{i},DFdivK{i},DFvK{i},DFgK{i},p{i},i,tstep)
-        end
-        
-        checkNaNp(i) = all(all(~isnan(p{i}))); % true when there is no NaN
-
-%         pValTol = 0;
-        pValTol = 1e-2;
-        [pvalUnder{i},pvalAbove{i},is_pvalUnder(i),is_pvalAbove(i)] = CheckPValuesInInterval(p{i},pValTol);
-
     end % for nOP
     
-    %% assign new values to old ones
+    % assign new values to old ones and check the PF values are within (0,1)
     for i = 1:in.nOP
         p{i} = p_new{i};
+        % feedback on the evolution
+        checkNaNp(i) = all(all(~isnan(p{i}))); % true when there is no NaN
+        % tolerance on values of PFs to go out of the interval (0,1)
+        pValTol = 1e-2;
+        [pvalUnder{i},pvalAbove{i},is_pvalUnder(i),is_pvalAbove(i)] = CheckPValuesInInterval(p{i},pValTol);
     end
     
     %% checkpoint calculations - energy, area, arc length ; print progress
     if any(tstep==tctrout_all)
         
-        if tstep > in.precycle && in.is_conc_conserved
-            Fdens_combined{2} = hL.*in.AL.*(cL-in.cLeq).^2 + hS.*in.AL.*(cS-in.cSeq).^2;
-        end
+%         if is_incl_dep_maincalc || in.is_misori_dependent
+%             if is_incl_dep_maincalc 
+%                 normgp_i = sqrt(gp{ind_singlePF_IEcalc}{1}.^2+gp{ind_singlePF_IEcalc}{2}.^2);
+%             else
+%                 normgp_i = sqrt(gradX(p{ind_singlePF_IEcalc}).^2+gradY(p{ind_singlePF_IEcalc}).^2);
+%             end
+%             cond_singlePF_IEcalc = normgp_i >= in.intf.limval.aniso.inner/(2*in.dx);
+% %             [F(ctr,:), S(ctr,:)] = CalcEnergyAreas(Fdens,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,cond_singlePF_IEcalc,kappa);
+%     
+%         else % precycle or isotropic
+%             sumpsqpsq = zeros(simsize);
+%             for i = 1:(in.nOP-1) % sumpsqpsq was not calculated in isotropic cycle
+%                 for j = (i+1):in.nOP
+%                     sumpsqpsq = sumpsqpsq + p{i}.^2.*p{j}.^2;
+%                 end
+%             end
+%             normgp_i = sqrt(gradX(p{ind_singlePF_IEcalc}).^2+gradY(p{ind_singlePF_IEcalc}).^2);
+%             cond_singlePF_IEcalc = normgp_i >= in.intf.limval.aniso.inner/(2*in.dx);
+%         end
+%         [F(ctr,:), S(ctr,:)] = CalcEnergyAreas(Fdens,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,cond_singlePF_IEcalc,kappa);
         
-        if is_incl_dep_maincalc || in.is_misori_dependent
-            if is_incl_dep_maincalc 
-                normgp_i = sqrt(gp{ind_singlePF_IEcalc}{1}.^2+gp{ind_singlePF_IEcalc}{2}.^2);
-            else
-                normgp_i = sqrt(gradX(p{ind_singlePF_IEcalc}).^2+gradY(p{ind_singlePF_IEcalc}).^2);
-            end
-            cond_singlePF_IEcalc = normgp_i >= in.intf.limval.aniso.inner/(2*in.dx);
-            [F(ctr,:), S(ctr,:),~] = CalcEnergyAreasArclength(Fdens_combined,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,cond_singlePF_IEcalc,kappa);
-    
-        else % precycle or isotropic
-            sumpsqpsq = zeros(simsize);
-            for i = 1:(in.nOP-1) % sumpsqpsq was not calculated in isotropic cycle
-                for j = (i+1):in.nOP
-                    sumpsqpsq = sumpsqpsq + p{i}.^2.*p{j}.^2;
-                end
-            end
-            normgp_i = sqrt(gradX(p{ind_singlePF_IEcalc}).^2+gradY(p{ind_singlePF_IEcalc}).^2);
-            cond_singlePF_IEcalc = normgp_i >= in.intf.limval.aniso.inner/(2*in.dx);
-            [F(ctr,:), S(ctr,:), ~] = CalcEnergyAreasArclength(Fdens_combined,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,cond_singlePF_IEcalc,kappa);
-        end
-        
-        Fdens_combined{1} = zeros(simsize);
-        Fdens_combined{2} = zeros(simsize);
+        [F(ctr,:), S(ctr,:)] = CalcEnergyAreas(Fdens,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,kappa);
+        Fdens = zeros(simsize);
         
         if ctr >1
             condSinvariant = S(ctr,2)-S(ctr-1,2)~=0;
@@ -1412,17 +1164,6 @@ function DispMsgPrecycleTerminated(precycle,tstep,is_inclination_dependent)
         disp(['time step ' num2str(tstep) ': Precycle terminated, anisotropic simulation starts.'])
     end
 end % func DispMsgPrecycleTerminated
-%% AssignAnisotropyFunction
-% function [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(in)
-% % [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(codeIEaniso,is_isotropic,nfold,offset_ang)
-%     [~,nfold,codeIEaniso,offset_ang,~] = anisopar_to_par(in);
-%     switch codeIEaniso
-%         case 'IEanisofun_1'
-%             fIEijfun = @(phi,soa) ones(size(phi)) + soa*cos(nfold*(phi+offset_ang));
-%             dfIEijfun = @(phi,soa) -nfold*soa*sin(nfold*(phi+offset_ang));
-%             ddfIEijfun = @(phi,soa) -nfold*nfold*soa*cos(nfold*(phi+offset_ang));
-%     end % switch codeIEaniso
-% end % function AssignAnisotropyFunction
 
 %% FindRowsWith_i_And_j_Larger
 function ind_rows_with_i_and_j_larger = FindRowsWith_i_And_j_Larger(indpairs,i)
@@ -1648,32 +1389,12 @@ function [kappa, gam, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam, L, gkL, in, 
     end % if model
     
 end % func 
-%% CalcGradofkappa_2nOP
-function gradkpp = CalcGradofkappa_2nOP(kpp0_ij,danisoKP_ij,doridX_ij,doridY_ij)
-%         if nOP == 2
-                gradkpp{1} = kpp0_ij.*danisoKP_ij.*doridX_ij ;
-                gradkpp{2} = kpp0_ij.*danisoKP_ij.*doridY_ij; 
-                gradkpp{1}(isnan(gradkpp{1})) = 0;
-                gradkpp{2}(isnan(gradkpp{2})) = 0;
-%                 assertGradkpp = [all(~isnan(gradkpp{1})) , all(~isnan(gradkpp{2}))];
-%                 assert(all(assertGradkpp),'NaN in gradkpp')
-%         else % !! TO BE MODIFIED
-%             kappa = kappa + kappa_ij.*p{i}.^2.*p{j}.^2./sumpsqpsq;
-%             gam   = gam   + gamma_ij.*p{i}.^2.*p{j}.^2./sumpsqpsq;
-%             %
-%             gradkpp{1} = gradkpp{1} + ( kpp0_ij.*danisoKP_ij.*doridX_ij ).*p{i}.^2.*p{j}.^2./sumpsqpsq;
-%             gradkpp{2} = gradkpp{2} + ( kpp0_ij.*danisoKP_ij.*doridY_ij ).*p{i}.^2.*p{j}.^2./sumpsqpsq;
-%             gradkpp{1}(isnan(gradkpp{1})) = 0;
-%             gradkpp{2}(isnan(gradkpp{2})) = 0;
-%         end% if nOP
-end % func CalcGradofkappa_2nOP
 %% CalcSignFromOrderInPair
 % prefactor is (-1) when 'i' is in the 2nd column of k-th row of indpairs
 % and (1) when it is in the 1st column
 function prefactor = CalcSignFromOrderInPair(k,i,indpairs) 
     prefactor = sign(1.5-find(indpairs(k,:)==i)); 
 end
-
 
 %% CalcGderPrefactors
 % calculates model-specific factors for gradient derivatives
@@ -1779,32 +1500,7 @@ function dkppdGp_all = CalcGderivativeOfKappa_i_And_j_AddTerm(dkppdGp_all,dkppij
         end % for ddim
     end% if nOP
 end % func CalcGderivativeOfKappaGamma_i_And_j_AddTerm
-%% CalcXYDivTermsGderVecFields
-function [gradXdPARdijGp, gradYdPARijdGp] = CalcXYDivTermsGderVecFields(nnlsq,nnl,danisoPAR,nn,ddanisoPAR,doridX,dnndX,doridY,dnndY);
-    % PAR stands for either kappa or gamma (the latter only in case of strong anisotropy)
-    global gradX gradY
-    gradXdPARdijGp = - (gradX(nnlsq)./2./nnl.^3.*danisoPAR.*nn{2} + nnl.\ddanisoPAR.*doridX.*nn{2}   +  nnl.\danisoPAR.*dnndX{2} );
-    gradYdPARijdGp = gradY(nnlsq)./2./nnl.^3.*danisoPAR.*nn{1} + nnl.\ddanisoPAR.*doridY.*nn{1}   +  nnl.\danisoPAR.*dnndY{1} ;
-end % func CalcXYDivTermsGderVecFields
-%% CalcXYDivGderGamma_weak
-function [gradXdgmmdijGp, gradYdgmmijdGp] = CalcXYDivGderGamma_weak(gradXdkppdijGp,gradYdkppdijGp,A,anisoIE,danisoIE,dkppdGp_i,doridX,doridY)
-    gradXdgmmdijGp = gradXdkppdijGp.*( 2*A./(A.*anisoIE-2).^2 )  +  dkppdGp_i{1}.*( -4*A^2./(A*anisoIE-2).^3 ).*danisoIE.*doridX ;
-    gradYdgmmijdGp = gradYdkppdijGp.*( 2*A./(A.*anisoIE-2).^2 )  +  dkppdGp_i{2}.*(-4*A^2./(A*anisoIE-2).^3 ).*danisoIE.*doridY ;            
-end % func CalcXYDivGderGamma_weak
-%% CalcDivergenceOfGderVecFields_2nOP
-function [divdkppdGp_i, divdgmmdGp_i] = CalcDivergenceOfGderVecFields_2nOP(prefactor,condIntoDF,kpp0,gradXdkppdijGp, gradYdkppdijGp,gradXdgmmdijGp, gradYdgmmijdGp)
-% if nOP ==2
-    simsize = size(condIntoDF);
-    divdkppdGp_i = zeros(simsize);
-    divdgmmdGp_i = zeros(simsize);
-    divdkppdGp_i(condIntoDF) = prefactor*kpp0*(gradXdkppdijGp(condIntoDF) + gradYdkppdijGp(condIntoDF));
-    divdgmmdGp_i(condIntoDF) = prefactor*(gradXdgmmdijGp(condIntoDF) + gradYdgmmijdGp(condIntoDF));
-% else % CHECK!!
-% divdkppdGp_i = divdkppdGp_i + prefactor*kpp0(k)*(gradXdkppdijGp+gradYdkppdijGp).*(p{i}.^2).*(p{j}.^2)./sumpsqpsq;
-% divdgmmdGp_i = divdgmmdGp_i + prefactor*(gradXdgmmdijGp+gradYdgmmijdGp).*(p{i}.^2).*(p{j}.^2)./sumpsqpsq;
-% %                     divdgmmdGp_i = divdgmmdGp_i + prefactor*(gradXdgmmdijGp+gradYdgmmijdGp).*(p{i}.^2).*(p{j}.^2)./sumpsqpsq;
-% end % if nOP
-end % func CalcDivergenceOfGderVecFields_2nOP
+
 %% CalcDrivingForceTerms_Isotropic
 % function [df0dp , DFlapp] = CalcDrivingForceTerms_Isotropic(p_i, m, sumgam_ij_psq_i, kappa,lapp_i,condIntoDF)
 function [df0dp , DFlapp] = CalcDrivingForceTerms_Isotropic(p_i, m, sumgam_ij_psq_i, kappa,lapp_i)
@@ -1879,24 +1575,6 @@ function CheckAnistropicTermsAreZero(DFdivG_i,DFvG_i,DFdivK_i,DFvK_i,DFgK_i,i,ts
     end 
 end % func CheckAnistropicTermsAreZero
 
-%% PrintDrivingForces
-function PrintDrivingForces(dt,L,df0dp_i,DFlapp_i,DFdivG_i,DFvG_i,DFdivK_i,DFvK_i,DFgK_i,p_i,i,tstep)
-    disp(['  OP ' num2str(i) ' after tstep ' num2str(tstep)])
-    % values displayed are multiplied by (- dt*L)
-    fprintf(['[min, max, std] = [' strminmaxstd(-dt*L*df0dp_i) ']\t...in... df0dp ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFlapp_i) ']\t...in... DFlapp ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFdivG_i) ']\t...in... DFdivG ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFdivK_i)  ']\t...in... DFdivK ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFvG_i) ']\t...in... DFvG ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFvK_i) ']\t...in... DFvK ' num2str(i) '\n' ])
-    fprintf(['[min, max, std] = [' strminmaxstd(dt*L*DFgK_i) ']\t...in... DFgK ' num2str(i) '\n' ])
-    fprintf(['*[min, max] = [' num2str([min(min(p_i))  max(max(p_i))],'%0.5e\t') ']\t...in... p ' num2str(i) '\n' ])
-    
-end % func PrintDrivingForces
-%% strminmaxstd
-function string = strminmaxstd(S) 
-    string = num2str([min(min(S)) max(max(S)) std(std(S))],'%0.4e\t');
-end % func strminmaxstd
 %% CheckPValuesInInterval
 function [pvalUnder_i,pvalAbove_i,is_pvalUnder_i,is_pvalAbove_i] = CheckPValuesInInterval(p_i,pValTol)
         pvalUnder_i = p_i < -pValTol;
@@ -1914,34 +1592,28 @@ function [pvalUnder_i,pvalAbove_i,is_pvalUnder_i,is_pvalAbove_i] = CheckPValuesI
             is_pvalAbove_i = false;
         end
 end % func CheckPValuesInInterval
-%%  CalcEnergyAreasArclength
-% function[F_ctr, S_ctr, arc_length_ctr] = CalcEnergyAreasArclength_2nOP(m,p,kappa,gam,sumgradpsq,sumpsqpsq,in,tstep)
-% function [F_ctr, S_ctr, arc_length_ctr] = CalcEnergyAreasArclength(Fdens_combined,p,kappa,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,nnl)
-function [F_ctr, S_ctr, arc_length_ctr] = CalcEnergyAreasArclength(Fdens_combined,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,cond_singlePF_IEcalc,kappa)
-% Fdens_combined{1} ... interface energy density
-% Fdens_combined{2} ... bulk free energy density 
+%%  CalcEnergyAreas
+function [F_ctr, S_ctr] = CalcEnergyAreas(Fdens,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,kappa)
+% Fdens ... interface energy density
 
     if length(gam_sumpsqpsq)==1 % gam_sumpsqpsq is only scalar
         gam_sumpsqpsq = sumpsqpsq*gam_sumpsqpsq;
     end
 
-    Fdens_combined{1} = Fdens_combined{1} + in.m*(1/4 + gam_sumpsqpsq);
+    if in.nOP == 2
+        Fdens = Fdens + in.m*(1/4 + gam_sumpsqpsq.*sumpsqpsq);
+    else
+        Fdens = Fdens + in.m*(1/4 + gam_sumpsqpsq);
+    end
     
-    F_ctr(1,1) = 2*sum(Fdens_combined{1}(cond_singlePF_IEcalc))*(in.dx)^2; % single grain total IE
-    F_ctr(1,5) = 2*sum(Fdens_combined{1})*(in.dx)^2; % total IE
+    
+%     F_ctr(1,1) = 2*sum(Fdens(cond_singlePF_IEcalc))*(in.dx)^2; % single grain total IE
+    F_ctr(1,1) = 2*sum(Fdens)*(in.dx)^2; % total IE
     
     dx = in.dx;
     % total energy
     % total energy normalized by interface volume
 %     F_ctr(1,2) = F_ctr(1,1) / (sum(sumpsqpsq)*(dx)^2 );
-    
-    if tstep>in.precycle % because concentration field was not yet initialized but I may want to know the energy in precycle
-        F_ctr(1,3) = sum(Fdens_combined{2})*(dx)^2;
-        F_ctr(1,4) = F_ctr(1,1) + F_ctr(1,3);
-    else
-        F_ctr(1,3) = 0;
-        F_ctr(1,4) = 0;
-    end
     
     % total energy per interface length
     % 2*Fdens_grad./IEfield has _unit_area_ perpendicularly to the intf
@@ -1961,43 +1633,13 @@ function [F_ctr, S_ctr, arc_length_ctr] = CalcEnergyAreasArclength(Fdens_combine
             IEfield = polyval(pg,sumpsqpsq./gam_sumpsqpsq).*sqrt(kappa*in.m).*ones([in.Ny*in.Nx,1]);
         end
     end    
-    F_ctr(1,2) = F_ctr(1,1)/( sum(2*Fdens_combined{1}(cond_singlePF_IEcalc)./IEfield(cond_singlePF_IEcalc))*dx^2 ); % single grain mean IE
-    F_ctr(1,6) = F_ctr(1,5)/( sum(2*Fdens_combined{1}./IEfield)*dx^2 );
-%     F_ctr(1,2) = F_ctr(1,1)/( sum(2*Fdens_grad./IEfield)*dx^2 );
     
-    if tstep>in.precycle % because concentration field was not yet initialized but I may want to know the energy in precycle
-        F_ctr(1,3) = sum(Fdens_combined{2})*(dx)^2;
-        F_ctr(1,4) = F_ctr(1,1) + F_ctr(1,3);
-    else
-        F_ctr(1,3) = 0;
-        F_ctr(1,4) = 0;
-    end
+%     F_ctr(1,3) = F_ctr(1,1)/( sum(2*Fdens(cond_singlePF_IEcalc)./IEfield(cond_singlePF_IEcalc))*dx^2 ); % single grain mean IE
+    F_ctr(1,2) = F_ctr(1,1)/( sum(2*Fdens./IEfield)*dx^2 );
     
-    % mean gives fraction of the area
-    S_ctr = nan(1,in.nOP);
-    for kk = 1:in.nOP
-        S_ctr(1,kk) = mean(p{kk}.^2./sumpsq);
-    end
+    % mean of interpolation function gives fraction of area of the phase field in the domain
+    S_ctr = cellfun(@(x) mean(x.^2./sumpsq),p)';
 
-    if in.calc_arc_length && tstep == 1 
-        assert(strcmp(in.ICcode,'CircleInMatrix'),'Invalid ICcode, must modify the arc calculation routine')
-        assert(in.nOP == 2,'Too many OPs, must modify the arc calculation routine')
-        arc_length_ctr = 2*pi*in.ICparam(3)*dx;
-    elseif in.calc_arc_length 
-        Nx = in.Nx;
-        Ny = in.Ny;
-        x = (1:Nx)*dx;
-        y = (1:Ny)*dy;
-        C = contourc(x,y,reshape(p{1}-p{2},[Ny Nx]),[0 , 0]);
-        C(:,1) = [];
-        Cx = C(1,:);
-        Cx_nextpt = Cx([2:end 1]); % assumes closed curve 
-        Cy = C(2,:);
-        Cy_nextpt = Cy([2:end 1]);
-        arc_length_ctr = sum( sqrt( (Cx-Cx_nextpt).^2 + (Cy-Cy_nextpt).^2 ) );
-    else
-        arc_length_ctr = NaN;
-    end
 end % func CalcEnergyAreasArclength
 
 %% plot2D_from_lin_2xn

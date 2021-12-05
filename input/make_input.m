@@ -8,19 +8,20 @@ function input = inputfile_GGaniso
 %%
 Nx = 100;
 Ny = 100;
-precycle = 100;
-simtime = 0.03;
+precycle = 20;
+simtime = 0.01;
 % simtime = 1e5;
 Ndtstart = 1;
 
 % IW = 1e-9/(Nx/100);
 IW = 1e-9;
 % IW = 1e-6;
-dx = IW/7;
+IWpts = 7;
+dx = IW/IWpts;
 dy = dx;
 
 % switches
-model = 'IWvG'; % IWc, IWvG or IWvK
+model = 'IWc'; % IWc, IWvG or IWvK
 % is_with_constant_IW = false;
 is_conc_conserved = false;
 is_conserved = false;
@@ -30,7 +31,7 @@ is_fixedPF.bool = false; %
 
 ctrplot = 100; 
 ctrcnt = 100; % output made at linspace(1,Ndt,ctrcnt)
-plotcond = true;
+plotcond = false;
 plotDF = false;
 solvermethod = '2Dlin';
 laplacianmethod = '9pt20'; % '9pt20', '9pt8', '5pt'
@@ -67,26 +68,6 @@ if is_cond_termd.bool
     
 end
 
-if is_fixedPF.bool
-    is_fixedPF.code = 'mobility';
-    is_fixedPF.PFnum = 2;
-    is_fixedPF.factor = 0.5e-2;
-end
-
-if strcmp(BCs,'Nspecial')
-% right-half-plane angle must be with -sign
-%         BCs_specs.bottom = [1, 50, 120 ; 51, Nx, -30]; % [ind11, ind12, angle1 ; ind21, ind22, angle ; ind31 ...]
-%     BCs_specs.top = [1, 50, 120 ; 51, Nx, -30]; % [ind11, ind12, angle1 ; ind21, ind22, angle ; ind31 ...]
-
-%     BCs_specs.bottom = [1, Nx, 175 ]; % [ind11, ind12, angle1 ; ind21, ind22, angle ; ind31 ...]
-%     BCs_specs.bottom = [1, Nx, NN(1)]; % [ind11, ind12, angle1 ; ind21, ind22, angle ; ind31 ...]
-%     BCs_specs.top = [1, Nx, -BCs_specs.bottom(3)]; % tiled plane simulation
-    
-    BCs_specs.bottom = [1, floor(Nx/2), 120 ; ceil(Nx/2), Nx, -100]; % [ind11, ind12, angle1 ; ind21, ind22, angle ; ind31 ...]
-    BCs_specs.top = [1, floor(Nx/2), 180 ; ceil(Nx/2), Nx, -180];
-    BCs_specs.left = [1, floor(Ny/2), 60 ; ceil(Ny/2), Ny, -45];
-    BCs_specs.right = [1, floor(Ny/2), 45 ; ceil(Ny/2), Ny, -60];
-end
 
 %% model input assertion
 validmodels =  categorical({'IWc', 'IWvG','IWvK'});
@@ -94,10 +75,10 @@ assert(any(model==validmodels),['Invalid model input: ' model '. Choose one of: 
 clear validmodels
 %% IC 2 PFs 
 %___ 'CircleInMatrix' ... ICparam = [centerx centery radius]
-% ICcode = 'CircleInMatrix';
+ICcode = 'CircleInMatrix';
 % ICparam = [Nx/2 , 0.3*Ny , 0.38*Nx];
 % ICparam = [Nx/2 , 0.3*Ny , Nx/3];
-% ICparam = [Nx/2 , Nx/2 , Nx/3];
+ICparam = [Nx/2 , Nx/2 , Nx/3];
 % ICparam = [0 , 0 , Nx/2];
 % ICparam = [Nx/2 , 0 , Nx/3];
 % ICparam = [Nx/2, 1 , Ny/3*2];
@@ -121,8 +102,8 @@ clear validmodels
 % ICcode = 'RectangleInMatrix';
 % ICparam = [Nx/4 , Ny/4];
 % ___ 'Wulff_weak' ... ICparam = [center_x , center_y , radius , Omega]
-ICcode = 'Wulff_weak';
-ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
+% ICcode = 'Wulff_weak';
+% ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
 % ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
 %___ 'EAVarAng' ... ICparam = [angLdeg angRdeg init_rad_meters ]
     % compound of 2 circular arcs with different contact angle with x axis connected by tangent  line
@@ -197,7 +178,7 @@ if is_inclination_dependent_IE % currently only 1 inclination-dependent type of 
     PFpar_compspec = 'fullaniso'; % 'mean' or 'fullaniso' procesing of IE, IWc is always 'mean'
     intf.isStrongAniso = false;
     intf.params_incl_dep.nfold = 4 ;
-    intf.params_incl_dep.Omega = 3.6;
+    intf.params_incl_dep.Omega = 0.6;
     intf.params_incl_dep.soaIE = intf.params_incl_dep.Omega/(intf.params_incl_dep.nfold^2-1);
 %     intf.params_incl_dep.soaIE = 0.1;
 %     intf.params_incl_dep.Omega = intf.params_incl_dep.soaIE*(intf.params_incl_dep.nfold^2-1);
