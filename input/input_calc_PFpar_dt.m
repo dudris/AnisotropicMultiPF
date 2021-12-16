@@ -185,24 +185,24 @@ function IEinit = determineIEinit(IE_phases,model,intf,in)
         IEinit = determineIEinit_varIW(IEminmax);
         
     elseif strcmp(model,'IWvK')
-        % taking mean IE to compute mean PF parameters
-        if strcmp(in.PFpar_compspec,'mean')
-            IEinit = min(intf.IE_phases);
-        elseif strcmp(in.PFpar_compspec,'fullaniso')
-%         to account for the smallest with inclination dep. below
-            if any(intf.is_incl_dep_IE) % inclination dependent
+        
+        if any(intf.is_incl_dep_IE) % inclination dependent
+            % taking mean IE to compute mean PF parameters
+            if strcmp(in.PFpar_compspec,'mean')
+                IEinit = min(intf.IE_phases);
+            elseif strcmp(in.PFpar_compspec,'fullaniso')
+    %         to account for the smallest with inclination dep. below
                 % minimal reached aniso energy is meanIE*(1 - soaIE)
                 minIEaniso = min(intf.IE_phases(intf.is_incl_dep_IE))*(1 - intf.params_incl_dep.soaIE);
                 % some other isotropic interface can have smaller IE
                 IEinit = min([minIEaniso, intf.IE_phases(~intf.is_incl_dep_IE)]);
-            else
-                IEinit = min(intf.IE_phases);
-            end % if inclination dep
-        end% PF par computation specification
+            end% PF par computation specification
+        else
+            IEinit = min(intf.IE_phases);
+        end % if inclination dep
         
-    end % if 
+    end % if model
 end
-
 %% determineIEinit_varIW
 % find the most convenient IEinit - such that gamma is within reasonable
 % bounds irrespective of the ratio of IEmax/IEmin
@@ -241,123 +241,6 @@ end% func
 %     end
 % end
 
-%%  former iterative search for IEinit varIW
-% find the most convenient IEinit - such that gamma is within reasonable
-% bounds irrespective of the ratio of IEmax/IEmin
-% function SIGMA_INIT = determineIEinit_varIW(IW,intf,plotting)
-%     % limits on gamma to visualize the map
-%     uplim = 40;
-%     dlim = 1.5;
-%     is_in_interval = @(x) x>dlim & x<uplim;
-% 
-%     % with isotropic model just take the sigma_initi to be the one IE
-%     if min(intf.IE_phases) == max(intf.IE_phases)
-%         SIGMA_INIT = max(intf.IE_phases);
-%         return
-%     end
-%     
-%     sigma = linspace(min(intf.IE_phases),max(intf.IE_phases),200);
-%     sigma_init = sigma;
-%     % sigma_init = linspace(0.03,1,100);
-%     % sigma_init = [min(sigma) median(sigma) max(sigma)];
-%     % sigma_init = [min(sigma) max(sigma)];
-%     numIE = length(sigma_init);
-%     thickness_0 = IW;
-%     gamma = zeros(length(sigma),numIE);
-%     mu =ones(length(sigma),1);
-%     % kappa = zeros(1,numIE);
-%     % m = kappa;
-%     % thickness = gamma;
-%     % gsq = gamma;
-%     % L = gamma;
-%     
-%     % check whether the ratio is small enough to still have one interface symmetric
-%     [~, gamma1, ~, ~, ~, ~] = parameters_varIW(sigma,mu,thickness_0,max(intf.IE_phases));
-%     if all(is_in_interval(gamma1))
-%         SIGMA_INIT = max(intf.IE_phases);
-%         return
-%     end
-%     
-%     % investigate the map to find the most convenient IEinit - such that
-%     % gamma is within reasonable bounds
-%     for k =1:numIE
-%         sigma_0 = sigma_init(k);
-%     %     [kappa(k), gamma(:,k), m(k), L(:,k), thickness(:,k), gsq(:,k)] = parameters_varIW(sigma,mu,thickness_0,sigma_0);
-%         [~, gamma(:,k), ~, ~, ~, ~] = parameters_varIW(sigma,mu,thickness_0,sigma_0);
-%     %     linenames{k} = ['\sigma_0 = ' num2str(sigma_0)];
-%     end
-% 
-%     max_upline = 1;
-%     min_dline = 0;
-%     while max_upline>=min_dline 
-%         regionok = (gamma>dlim & gamma<uplim);
-%         lines = contourc(double(regionok),[0.5 0.5]);
-%         lines = lines';
-%         startind = find(lines(:,1)==0.5);
-%         if length(startind)==2
-%             firstline =  lines((startind(1)+1):(startind(2)-1) , :);
-%             secondline = lines((startind(2)+1):end , :);
-%             if firstline(1,2)>1
-%                 upline = firstline;
-%                 dline = secondline;
-%             else
-%                 dline = firstline;
-%                 upline = secondline;
-%             end
-%             max_upline = max(upline(:,1));
-%             min_dline = min(dline(:,1));
-%         elseif length(startind)==1
-%             max_upline = max(lines(2:end,1));
-%             min_dline=max_upline;
-%         elseif isempty(startind)
-%             min_dline = length(sigma);
-%             break
-%         else
-%             error('Unexpected progress in ''Multip_aniso_conc_varIW>determineIEinit_varIW''. Too many contour lines or none.')
-%         end
-%         dlim = dlim-1e-3;
-%     end
-% %     contour(regionok)
-%     
-%     if dlim<0.505
-%         warning('IEratio too large/small. Some gamma values may be unreasonable. check')
-%     end
-%     
-%     [max_upline,min_dline];
-%     SIGMA_INIT = sigma_init(floor(min_dline));
-%     COL = floor(min_dline);
-%     
-%     if plotting 
-%         figure(5)
-%         subplot(121)
-% %             imagesc(sigma_init/max(sigma),sigma,log10(abs(gamma))),
-%             imagesc(sigma_init,sigma,log10(abs(gamma))),
-%         %     contour(sigma_init,sigma,log10(abs(gamma)),100),
-%             title('log_{10}(abs(\gamma)) from alg. based on \sigma_0')
-%             % mesh(gamma)
-%             colorbar
-%             colormap('jet')
-%             axis equal
-%             xlabel('\sigma_0'),
-% %             xlabel('\sigma_0/\sigma_{max}'),
-%             ylabel('\sigma')
-%             set(gca,'YDir','normal')
-%         subplot(122)
-%             selec_col = zeros(size(regionok));
-%             selec_col(:,COL) = 1;
-% %             imagesc(sigma_init/max(sigma),sigma,regionok+selec_col),
-%             imagesc(sigma_init,sigma,regionok+selec_col),
-%             axis equal
-%             title([ num2str(dlim) ' <= \gamma <= ' num2str(uplim)])
-%             % mesh(gamma)
-%             colorbar
-% %             xlabel('\sigma_0/\sigma_{max}'),
-%             xlabel('\sigma_0'),
-%             ylabel('\sigma')
-%             set(gca,'YDir','normal')
-%     end
-%     
-% end %func determineIEinit_varIW
 
 %% check_condterm_meantime
 % hard to guess how many timesteps fill the meantime for energy convergence. 
