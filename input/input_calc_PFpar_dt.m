@@ -14,9 +14,9 @@ in = varargin{1};
 in.nOP = Assign_nOP_from_ICcode(in.ICcode);
 
 % [in.IE,in.is_locally_isotropic,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.ind_is_solid,in.PFori);
-[in.IE,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
+[in.IE,in.GBmobility,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
 
-in.GBmobility = 7.5e-16*ones(size(in.IE));
+% in.GBmobility = 7.5e-16*ones(size(in.IE));
 
 in.IEinit = determineIEinit(in.intf.IE_phases(:),in.model,in.intf,in);
 % decides on how maxmin IE are treated

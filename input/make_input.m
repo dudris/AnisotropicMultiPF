@@ -61,28 +61,27 @@ PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 % intf.IE_phases = [1/3 ]; % [s-l ]
 % intf.is_incl_dep_IE = [ true];
 % intf.is_incl_dep_L = [ false ];
-%% define number of phases
-numphases = 1;
 %% INITIAL CONDITION 2 PHASE FIELDS
 %___ 'CircleInMatrix' ... ICparam = [centerx centery radius]
 % ICcode = 'CircleInMatrix';
 % ICparam = [Nx/2 , Nx/2 , Nx/3];
 
 % ___ 'Wulff_weak' ... ICparam = [center_x , center_y , radius , Omega], Omega<=1
-ICcode = 'Wulff_weak';
+% ICcode = 'Wulff_weak';
 % ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
-ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
+% ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
 
-PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
-PFphase = [1, 1]; % 
-intf.IE_phases = [1/3 ]; % [s-l ]
-intf.is_incl_dep_IE = [ true];
-intf.is_incl_dep_L = [ false ];
+% PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
+% PFphase = [1, 1]; % 
+% intf.IE_phases = 1/3 ; 
+% intf.mob_phases = 7.5e-16; % m^4/Js
+% intf.is_incl_dep_IE = true;
+% intf.is_incl_dep_L =  false;
 
 %% INITIAL CONDITION 3 PHASE FIELDS
 % ___ 'Tjunction' ... ICparam = [posSS_horizontal , posSL_vertical], 
-% ICcode = 'Tjunction';
-% ICparam = [Ny/2 , Nx/2];
+ICcode = 'Tjunction';
+ICparam = [Ny/2 , Nx/2];
 % ___ '2CirclesInMatrix' ... ICparam = [center1x center1y radius1 ; center2x center2y radius2]
 % ICcode = '2CirclesInMatrix';
 % ICparam = [3/4*Nx , 3/4*Nx , Nx/5/sqrt(2) ; Nx/4 Ny/3 Nx/5/sqrt(2)]; 
@@ -93,11 +92,12 @@ intf.is_incl_dep_L = [ false ];
 % intf.IE_phases = [0.3]; % [s-l , s-s], i.e. the types of interfaces 
 % intf.is_incl_dep = [false]; % is [s-l , s-s] inclination dependent
 
-% PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
-% PFphase = [1, 2, 2]; % 
-% intf.IE_phases = 0.3*[nan , 1 ; 1 0.4 ]; % [1-1 , 1-2 ; 2-1 , 2-2]
-% intf.is_incl_dep_IE = false(2);
-% intf.is_incl_dep_L = false(2);
+PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
+PFphase = [1, 2, 2]; % 
+intf.IE_phases = 0.3*[nan , 1 ; 1 0.4 ]; % [1-1 , 1-2 ; 2-1 , 2-2]
+intf.mob_phases = 7.5e-16*ones(2); % m^4/Js
+intf.is_incl_dep_IE = false(2);
+intf.is_incl_dep_L = false(2);
 
 %% NO USER INPUT (process the interface properties)
 nOP = Assign_nOP_from_ICcode(ICcode);
@@ -155,9 +155,10 @@ assert(any(model==validmodels),['Invalid model input: ' model '. Choose one of: 
 clear validmodels
 
 % 
-assert(all(size(intf.IE_phases)==[numphases,numphases]),['size(intf.IE_phases)~=[numphases,numphases], size(intf.IE_phases)=' num2str(size(intf.IE_phases)) ', numphases=' num2str(numphases)])
-assert(all(size(intf.is_incl_dep_IE)==[numphases,numphases]),['size(intf.is_incl_dep_IE)~=[numphases,numphases], size(intf.is_incl_dep_IE)=' num2str(size(intf.is_incl_dep_IE)) ', numphases=' num2str(numphases)])
-assert(all(size(intf.is_incl_dep_L)==[numphases,numphases]),['size(intf.is_incl_dep_L)~=[numphases,numphases], size(intf.is_incl_dep_L)=' num2str(size(intf.is_incl_dep_L)) ', numphases=' num2str(numphases)])
+numphases = length(unique(PFphase));
+assert(all(size(intf.IE_phases)==numphases),['size(intf.IE_phases)~=[numphases,numphases], size(intf.IE_phases)=' num2str(size(intf.IE_phases)) ', numphases=' num2str(numphases)])
+assert(all(size(intf.is_incl_dep_IE)==numphases),['size(intf.is_incl_dep_IE)~=[numphases,numphases], size(intf.is_incl_dep_IE)=' num2str(size(intf.is_incl_dep_IE)) ', numphases=' num2str(numphases)])
+assert(all(size(intf.is_incl_dep_L)==numphases),['size(intf.is_incl_dep_L)~=[numphases,numphases], size(intf.is_incl_dep_L)=' num2str(size(intf.is_incl_dep_L)) ', numphases=' num2str(numphases)])
 
 %% creating the input structure
 save 'dummy.mat'

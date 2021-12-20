@@ -7,13 +7,14 @@
 % is_locally_aniso_L ... vector of bools,  size(is_locally_aniso_L) = [npairs,1]
 % misori                 ... vector of misorientation angles,  size(misori) = [npairs,1]
 
-function [IE,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfaceProperties(nOP,intf,PFori, PFphase)
+function [IE,GBmobility,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfaceProperties(nOP,intf,PFori, PFphase)
     npairs = nOP*(nOP-1)/2;
     indpairs = combnk(1:nOP,2); % all possible 2-element combinatinos os numbers 1:nOP
 %     is_locally_isotropic = false(npairs,1);
     is_locally_aniso_IE = false(npairs,1);
     is_locally_aniso_L = false(npairs,1);
     misori = zeros(npairs,1);
+    GBmobility = zeros(npairs,1);
     if any(intf.is_incl_dep_IE) % incl. dep IE
         IE = ones(npairs,2);
     else
@@ -30,6 +31,7 @@ function [IE,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfacePro
         is_locally_aniso_L(k) = intf.is_incl_dep_L(i_phase,j_phase);
         misori(k) = PFori(j)- PFori(i); % CAREFUL - the order ij or ji could be relevant
         IE_mean(k) = intf.IE_phases(i_phase,j_phase);
+        GBmobility(k) = intf.mob_phases(i_phase,j_phase);
             
         if is_locally_aniso_IE(k) % locally inclination-dep. IE
             IE(k,[1,2]) = IE_mean(k)*([1 1] + intf.params_incl_dep.soaIE*[1 -1]); % [IE_max IE_min] for each interface , i.e. (npairs x 2)
