@@ -14,16 +14,11 @@ in = varargin{1};
 in.nOP = Assign_nOP_from_ICcode(in.ICcode);
 
 % [in.IE,in.is_locally_isotropic,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.ind_is_solid,in.PFori);
-[in.IE,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.ind_is_solid,in.PFori);
+[in.IE,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
 
 in.GBmobility = 7.5e-16*ones(size(in.IE));
-if in.is_fixedPF.bool && strcmp(in.is_fixedPF.code,'mobility')
-    indpairs = combnk(1:nOP,2);
-    ind_tofix = any(indpairs==is_fixedPF.PFnum,2);
-    in.GBmobility(ind_tofix) = in.GBmobility(ind_tofix)*in.is_fixedPF.factor;
-end
 
-in.IEinit = determineIEinit(in.intf.IE_phases,in.model,in.intf,in);
+in.IEinit = determineIEinit(in.intf.IE_phases(:),in.model,in.intf,in);
 % decides on how maxmin IE are treated
 IEresh = mean(in.IE,2);
 
@@ -148,6 +143,7 @@ end
 
 %% determineIEinit
 function IEinit = determineIEinit(IE_phases,model,intf,in)
+IE_phases = unique(IE_phases(~isnan(IE_phases)));
     if strcmp(model,'IWc')
 %         if min(IE_phases)/max(IE_phases)<0.2
 %             IEinit = 0.5*max(IE_phases);

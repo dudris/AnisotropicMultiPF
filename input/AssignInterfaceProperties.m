@@ -1,15 +1,15 @@
 %% AssignInterfaceProperties
 % [IE,is_locally_isotropic] = AssignInterfaceProperties(nOP,intf,ind_is_solid)
 % - to each pair-wise interface assigns mean IE, misorientation angles and a bool containing information whether that interface is inclination dependent
-% - for nOP there are N = (nOP-1)nOP/2 interfaces
-% IE                         ... vector of mean interface energies size(IE) = [N,1],
-% is_locally_aniso_IE ... vector of bools,  size(is_locally_aniso_IE) = [N,1]
-% is_locally_aniso_L ... vector of bools,  size(is_locally_aniso_L) = [N,1]
-% misori                 ... vector of misorientation angles,  size(misori) = [N,1]
+% - for nOP there are npairs = (nOP-1)nOP/2 interfaces
+% IE                         ... vector of mean interface energies size(IE) = [npairs,1],
+% is_locally_aniso_IE ... vector of bools,  size(is_locally_aniso_IE) = [npairs,1]
+% is_locally_aniso_L ... vector of bools,  size(is_locally_aniso_L) = [npairs,1]
+% misori                 ... vector of misorientation angles,  size(misori) = [npairs,1]
 
-function [IE,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfaceProperties(nOP,intf,ind_is_solid,PFori)
+function [IE,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfaceProperties(nOP,intf,PFori, PFphase)
     npairs = nOP*(nOP-1)/2;
-    indpairs = combnk(1:nOP,2);
+    indpairs = combnk(1:nOP,2); % all possible 2-element combinatinos os numbers 1:nOP
 %     is_locally_isotropic = false(npairs,1);
     is_locally_aniso_IE = false(npairs,1);
     is_locally_aniso_L = false(npairs,1);
@@ -20,32 +20,20 @@ function [IE,is_locally_aniso_IE,is_locally_aniso_L,misori] = AssignInterfacePro
         IE = ones(npairs,1);
     end
     
-    single_phase = false;
-    if length(ind_is_solid)==nOP || isempty(ind_is_solid)
-        single_phase = true;
-    end
-    
     for k = 1:npairs
         i = indpairs(k,1);
         j = indpairs(k,2);
-        is_solid(1) = any(i == ind_is_solid);
-        is_solid(2) = any(j == ind_is_solid);
-        assert(any(is_solid),'Check the simulation input: two PFs of liquid phase encountered.')
-        if all(is_solid) && ~single_phase
-            intf_type = 2;
-        elseif any(is_solid) 
-            intf_type = 1;
-        end
         
-        is_locally_aniso_IE(k) = intf.is_incl_dep_IE(intf_type);
-        is_locally_aniso_L(k) = intf.is_incl_dep_L(intf_type);
-%         is_locally_isotropic(k) = is_locally_isotorpic_IE && ~intf.is_incl_dep_L(intf_type) ;
+        i_phase = PFphase(indpairs(k,1));
+        j_phase = PFphase(indpairs(k,2));
+        is_locally_aniso_IE(k) = intf.is_incl_dep_IE(i_phase,j_phase);
+        is_locally_aniso_L(k) = intf.is_incl_dep_L(i_phase,j_phase);
         misori(k) = PFori(j)- PFori(i); % CAREFUL - the order ij or ji could be relevant
-        IE_mean(k) = intf.IE_phases(intf_type);
+        IE_mean(k) = intf.IE_phases(i_phase,j_phase);
             
         if is_locally_aniso_IE(k) % locally inclination-dep. IE
             IE(k,[1,2]) = IE_mean(k)*([1 1] + intf.params_incl_dep.soaIE*[1 -1]); % [IE_max IE_min] for each interface , i.e. (npairs x 2)
-        elseif ~is_locally_aniso_IE(k) && any(intf.is_incl_dep_IE) % locally isotropic intf in a system with some incl. dep IE
+        elseif ~is_locally_aniso_IE(k) && any(intf.is_incl_dep_IE(:)) % locally isotropic intf in a system with some incl. dep IE
             IE(k,1) = AssignIE_locally_iso(intf,misori(k),IE_mean(k)); 
             IE(k,2) = IE(k,1);
         else % is locally IE-isotropic and no 
