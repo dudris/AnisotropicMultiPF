@@ -12,7 +12,7 @@ function input = make_input
 Nx = 100; % number of grid points in x direction
 Ny = 100; % number of grid points in y direction
 precycle = 20; % needed for inclination-dependent simulations. Number of time steps run with isotorpic model to make interface a little diffuse
-simtime = 0.01; % simulation time in seconds
+simtime = 0.03; % simulation time in seconds
 
 IW = 1e-9; % minimal inteface width in meters
 IWpts = 7; % number of points in the interface
@@ -21,9 +21,8 @@ dy = dx; % equidistant grid is assumed
 
 % switches
 model = 'IWc'; % either of 'IWc', 'IWvG' or 'IWvK', as described in the Paper
-is_cond_termd.bool = false; % set true if 
 
-ctrplot = 100; 
+
 ctrcnt = 100; % output made at linspace(1,Ndt,ctrcnt)
 plotcond = false;
 plotDF = true;
@@ -32,7 +31,7 @@ laplacianmethod = '9pt20'; % '9pt20', '9pt8', '5pt'
 BCs = 'N'; % 'P', 'N', 'mix',
 
 % save phase fields every time after defined number of time steps
-outputAtAllCtr = { false , 200}; % should be outputAtAllCtr{2} > ctrplot && mod(outputAtAllCtr{2},ctrplot)==0
+% outputAtAllCtr = { false , 200}; % should be outputAtAllCtr{2} > ctrplot && mod(outputAtAllCtr{2},ctrplot)==0
 % save phase fields after defined simulation time (number of checkpoints between 1st and last time step)
 outputAtChckpt = {false, 10}; % number of times in simtime the checkpoint output is saved 
 PauseAfterPlotting = false;
@@ -43,45 +42,43 @@ PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 % - uncomment the desired initial condition 'ICcond' and set the
 % parameters 'ICparam' specifying details of the geometry
 % - units used are grid points
-% - 2 phases were assumed, denoted as 'solid' and 'liquid'
-%   - phase field with number 1 is always 'liquid' 
-%   - 'liquid' is represented by a single phase field parameter
-% - the following variables must be set 
+% - the below variables must be specified
 %   - PFori ... size(PFori) = [1,nOP]
 %       - each phase field is defined orientation in polar angle (i.e. w.r.t. x axis)
 %       - first phase field assumed to have orientation 0
-%   - ind_is_solid ... vector of numbers of phase fields which belong to the 'solid'
-%   phase (excluding number 1)
+%   - PFphases ... size(PFphases) = [1,nOP]
+%       - each phase field is assigned to a phase of certain number
+%       - number of phases = unique(PFphases)
 %   - intf ... struct aggregating interface properties
+%       - the below 4 variables are all matrices [numphases,numphases]
 %       - intf.IE_phases ... intetrface energy of distinct types of
-%       interfaces in the order [solid-liquid, solid-solid]
-%           - systems with liquid-liquid interaction were not simulated,
-% PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
-% ind_is_solid = [2]; % must not be index 1
-% intf.IE_phases = [1/3 ]; % [s-l ]
-% intf.is_incl_dep_IE = [ true];
-% intf.is_incl_dep_L = [ false ];
+%       interfaces 
+%       - intf.mob_phases ... mobilities of distinct types of interfaces
+%       - intf.is_incl_dep_IE ... boolean specifying which interfaces have
+%       inclination dep. interface energy
+%       - intf.is_incl_dep_L ... boolean specifying which interfaces have
+%       inclination dep. mobility
 %% INITIAL CONDITION 2 PHASE FIELDS
 %___ 'CircleInMatrix' ... ICparam = [centerx centery radius]
-% ICcode = 'CircleInMatrix';
-% ICparam = [Nx/2 , Nx/2 , Nx/3];
+ICcode = 'CircleInMatrix';
+ICparam = [Nx/2 , Nx/2 , Nx/3];
 
 % ___ 'Wulff_weak' ... ICparam = [center_x , center_y , radius , Omega], Omega<=1
 % ICcode = 'Wulff_weak';
 % ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
 % ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
 
-% PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
-% PFphase = [1, 1]; % 
-% intf.IE_phases = 1/3 ; 
-% intf.mob_phases = 7.5e-16; % m^4/Js
-% intf.is_incl_dep_IE = true;
-% intf.is_incl_dep_L =  false;
+PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
+PFphase = [1, 1]; % 
+intf.IE_phases = 1/3 ; 
+intf.mob_phases = 7.5e-16; % m^4/Js
+intf.is_incl_dep_IE = true;
+intf.is_incl_dep_L =  false;
 
 %% INITIAL CONDITION 3 PHASE FIELDS
 % ___ 'Tjunction' ... ICparam = [posSS_horizontal , posSL_vertical], 
-ICcode = 'Tjunction';
-ICparam = [Ny/2 , Nx/2];
+% ICcode = 'Tjunction';
+% ICparam = [Ny/2 , Nx/2];
 % ___ '2CirclesInMatrix' ... ICparam = [center1x center1y radius1 ; center2x center2y radius2]
 % ICcode = '2CirclesInMatrix';
 % ICparam = [3/4*Nx , 3/4*Nx , Nx/5/sqrt(2) ; Nx/4 Ny/3 Nx/5/sqrt(2)]; 
@@ -89,15 +86,16 @@ ICparam = [Ny/2 , Nx/2];
 
 % PFori = [0,10,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
 % PFphase = [1, 1, 1]; % 
-% intf.IE_phases = [0.3]; % [s-l , s-s], i.e. the types of interfaces 
+% intf.mob_phases = 7.5e-16; % m^4/Js
+% intf.IE_phases = [0.3]; %  the types of interfaces 
 % intf.is_incl_dep = [false]; % is [s-l , s-s] inclination dependent
 
-PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
-PFphase = [1, 2, 2]; % 
-intf.IE_phases = 0.3*[nan , 1 ; 1 0.4 ]; % [1-1 , 1-2 ; 2-1 , 2-2]
-intf.mob_phases = 7.5e-16*ones(2); % m^4/Js
-intf.is_incl_dep_IE = false(2);
-intf.is_incl_dep_L = false(2);
+% PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
+% PFphase = [1, 2, 2]; % 
+% intf.IE_phases = 0.3*[nan , 1 ; 1 0.4 ]; % [1-1 , 1-2 ; 2-1 , 2-2]
+% intf.mob_phases = 7.5e-16*ones(2); % m^4/Js
+% intf.is_incl_dep_IE = false(2);
+% intf.is_incl_dep_L = false(2);
 
 %% NO USER INPUT (process the interface properties)
 nOP = Assign_nOP_from_ICcode(ICcode);

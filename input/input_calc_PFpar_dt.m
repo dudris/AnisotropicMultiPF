@@ -61,8 +61,6 @@ in.dt = in.Courant_nr*in.dx^2/max(maxLaniso*in.Lij.*in.kpp0);
 in.Ndt = round(in.simtime/in.dt,-1);
 in.anisoNdt =in.Ndt - in.precycle;
 
-in.is_cond_termd = check_condterm_meantime(in.is_cond_termd,in.ctrplot,in.dt);
-
 if in.ctrcnt>in.Ndt
     in.tsteptsctr = int16(1:in.Ndt);
     warning('in.ctrcnt>in.Ndt, output length set to in.Ndt')
@@ -237,23 +235,6 @@ end% func
 %     end
 % end
 
-
-%% check_condterm_meantime
-% hard to guess how many timesteps fill the meantime for energy convergence. 
-% sets the meantime to be min 10*ctrplot*dt and max 50*ctrplot*dt
-function is_cond_termd = check_condterm_meantime(is_cond_termd,ctrplot,dt)
-    if is_cond_termd.bool && ( strcmp(is_cond_termd.code,'1g_totIE') || strcmp(is_cond_termd.code,'1g_meanIE') )
-        
-        
-        if ( is_cond_termd.meantime > (ctrplot*dt) ) && ( is_cond_termd.meantime/(ctrplot*dt) < 3 )
-            is_cond_termd.meantime = 10*(ctrplot*dt);
-        elseif is_cond_termd.meantime < (ctrplot*dt) 
-            is_cond_termd.meantime = 10*(ctrplot*dt);
-        elseif is_cond_termd.meantime/(ctrplot*dt) > 50
-            is_cond_termd.meantime = 50*(ctrplot*dt);
-        end
-    end% if
-end % func
 %% GetPFparameters 
 function [kpp0, gam0, m, L,IWout] = GetPFparamsIsotropic(IEres, GBmobility ,IWin)
     gam0 = 1.5;

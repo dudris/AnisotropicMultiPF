@@ -1,13 +1,16 @@
 %% [t_ctr, t_ctr_p]= get_sim_timeline(resultsentry)
-% t_ctr ... simulation time in equidistant timesteps with spacing resultsentry.ctrcnt AND in the timesteps where the simulated phase fields were saved
+% t_ctr ... simulation time in timesteps of checkpoint energy and area calculations AND in the timesteps where the simulated phase fields were saved
 % t_ctr_p... simulation time in timesteps where the simulated phase fields were saved
 function [t_ctr, t_ctr_p]= get_sim_timeline(resultsentry)
 
     re = resultsentry;
 
     t_ctr_p = re.Ndt;
-    if re.outputAtAllCtr{1} 
-        t_ctr_p = unique([re.in.outputAtAllCtr{2}:re.in.outputAtAllCtr{2}:re.Ndt , t_ctr_p]);
+    
+    if isfield(re,'outputAtAllCtr')
+        if re.outputAtAllCtr{1} 
+            t_ctr_p = unique([re.in.outputAtAllCtr{2}:re.in.outputAtAllCtr{2}:re.Ndt , t_ctr_p]);
+        end
     end
     
     if isfield(re,'outputAtChckpt')
