@@ -4,11 +4,11 @@ function [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(input, offse
     soaIE = input.soaIE;
     nfold = input.nfold;
     codeIEaniso = input.codeIEaniso;
-    offset_ang = -input.offset_ang;
 
     switch codeIEaniso
         case 'IEanisofun_1'
             if offset_ang_included
+                offset_ang = -input.offset_ang;
                 fIEijfun = @(phi,soa) ones(size(phi)) + soa*cos(nfold*(phi+offset_ang));
                 dfIEijfun = @(phi,soa) -nfold*soa*sin(nfold*(phi+offset_ang));
                 ddfIEijfun = @(phi,soa) -nfold*nfold*soa*cos(nfold*(phi+offset_ang));
