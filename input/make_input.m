@@ -24,14 +24,12 @@ model = 'IWc'; % either of 'IWc', 'IWvG' or 'IWvK', as described in the Paper
 
 
 ctrcnt = 100; % output made at linspace(1,Ndt,ctrcnt)
-plotcond = false;
-plotDF = true;
+plotcond = true;
+plotDF = true; % if plotcond=true AND plotDF=true, driving force terms will be plotted individually
 solvermethod = '2Dlin';
 laplacianmethod = '9pt20'; % '9pt20', '9pt8', '5pt'
 BCs = 'N'; % 'P', 'N', 'mix',
 
-% save phase fields every time after defined number of time steps
-% outputAtAllCtr = { false , 200}; % should be outputAtAllCtr{2} > ctrplot && mod(outputAtAllCtr{2},ctrplot)==0
 % save phase fields after defined simulation time (number of checkpoints between 1st and last time step)
 outputAtChckpt = {false, 10}; % number of times in simtime the checkpoint output is saved 
 PauseAfterPlotting = false;
@@ -44,7 +42,7 @@ PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 % - units used are grid points
 % - the below variables must be specified
 %   - PFori ... size(PFori) = [1,nOP]
-%       - each phase field is defined orientation in polar angle (i.e. w.r.t. x axis)
+%       - each phase field is assigned an orientation in polar angle (i.e. w.r.t. x axis)
 %       - first phase field assumed to have orientation 0
 %   - PFphases ... size(PFphases) = [1,nOP]
 %       - each phase field is assigned to a phase of certain number
@@ -103,10 +101,10 @@ is_inclination_dependent_IE = any(intf.is_incl_dep_IE(:));
 is_inclination_dependent_L = any(intf.is_incl_dep_L(:));
 is_misori_dependent = length(unique(intf.IE_phases(:)))>1;
 %% inclination-dependent properties
-if is_inclination_dependent_IE % currently only 1 inclination-dependent type of interface assumed
+if is_inclination_dependent_IE % currently only 1 type of inclination-dependence assumed
     intf.params_incl_dep.codeIEaniso = 'IEanisofun_1';
     PFpar_compspec = 'fullaniso'; % 'mean' or 'fullaniso' procesing of IE, IWc is always 'mean'
-    intf.isStrongAniso = false; %
+    intf.isStrongAniso = false; % set 'false' if values of parameter gamma remain within approx 0.8-3. Not systematically validated with isStrongAniso=true
     intf.params_incl_dep.nfold = 4 ;
     intf.params_incl_dep.Omega = 0.6; % normalized strength of anisotropy
     intf.params_incl_dep.soaIE = intf.params_incl_dep.Omega/(intf.params_incl_dep.nfold^2-1);
@@ -114,7 +112,7 @@ if is_inclination_dependent_IE % currently only 1 inclination-dependent type of 
 %     intf.params_incl_dep.Omega = intf.params_incl_dep.soaIE*(intf.params_incl_dep.nfold^2-1);
 end
 
-if is_inclination_dependent_L % currently only 1 inclination-dependent type of interface assumed
+if is_inclination_dependent_L % currently only 1 type of inclination-dependence assumed
     intf.params_incl_dep.Lnfold = 4 ;
     intf.params_incl_dep.LOmega = 0.2;
     intf.params_incl_dep.LsoaIE = intf.params_incl_dep.LOmega/(intf.params_incl_dep.Lnfold^2-1);
@@ -141,12 +139,6 @@ intf.limval.aniso.inner = 5e-3; %1e-2
 % intf.limval.aniso.outer =  1e-4; %;
 % intf.limval.aniso.inner = 1e-2; %1e-2 ; ; 
 %% check for input consistency
-
-if is_inclination_dependent_IE
-    if ~strcmp(PFpar_compspec,'fullaniso')
-        warning(['PFpar_compspec is not ''fullaniso''. Expect poorer stability with ''mean''. PFpar_compspec=' PFpar_compspec])
-    end
-end
 
 validmodels =  categorical({'IWc', 'IWvG','IWvK'});
 assert(any(model==validmodels),['Invalid model input: ' model '. Choose one of: ' validmodels])
