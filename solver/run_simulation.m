@@ -391,29 +391,17 @@ while simulation_proceeds
             partoplot_nm = '\gamma';
         end
         
-        if in.is_conc_conserved && in.is_inclination_dependent_IE && tstep > in.precycle
-            ind_ori_exists = find(~in.is_locally_isotropic);
-            ind_ori_exists = ind_ori_exists(1);
-            plot2D_from_lin_2x3(size2D,{sumpsq,p_new{1},p_new{2},ori{ind_ori_exists},partoplot,c},{['tstep = ' num2str(tstep) ',\Sigma \xi_i^2\xi_j^2' ],'\xi_1','\xi_2','ori_1',partoplot_nm,'c'})
-            
-        elseif ~in.is_conc_conserved && in.is_inclination_dependent_IE && tstep > in.precycle
+        if in.is_inclination_dependent_IE && tstep > in.precycle
             ind_ori_exists = find(in.is_locally_aniso_IE);
             ind_ori_exists = ind_ori_exists(1);
 %             plot_basic_info(sumpsq,p_new,ori{ind_ori_exists},kappa,nnl{ind_ori_exists},size2D,tstep,zeros(simsize))
             plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'sumpsqpsq',partoplot_nm,'xi_1','\xi_2'} , size2D, 2,false)
             
-        elseif (~in.is_conc_conserved && ~in.is_inclination_dependent_IE ) || tstep <=in.precycle
+        elseif ~in.is_inclination_dependent_IE  || tstep <=in.precycle
             if in.nOP == 3
                 plot2D_from_lin_2xn(1, {sumpsq,partoplot,ones(simsize), p{1},p{2},p{3}},{'sumpsqpsq',partoplot_nm,'blank space','xi_1','\xi_2','\xi_3'} , size2D, 3,false)
             elseif in.nOP==2
                 
-                plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'sumpsqpsq',partoplot_nm,'xi_1','\xi_2'} , size2D, 2,false)
-            end
-            
-        elseif in.is_conc_conserved && ~in.is_inclination_dependent_IE
-            if in.nOP == 3
-                plot2D_from_lin_2x3(size2D,{sumpsq,partoplot,c,p{1},p{2},p{3}},{['tstep = ' num2str(tstep) ', \Sigma \xi_i^2\xi_j^2' ], partoplot_nm, 'c', '\xi_1','\xi_2','\xi_3'})
-            elseif in.nOP==2
                 plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'sumpsqpsq',partoplot_nm,'xi_1','\xi_2'} , size2D, 2,false)
             end
         end
