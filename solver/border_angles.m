@@ -1,8 +1,10 @@
-% function th_m = border_angles(input,plotting)
-%  for odd nfold th_m(:,1)<th_m(:,2)
-function th_m = border_angles(input,plotting)
+% function th_m = border_angles(params_incl_dep,plotting)
+%   - returns borders of interval of forbidden angles
+%   - params_incl_dep is a field in input structure 'in': in.intf.params_incl_dep
+%   - for odd nfold th_m(:,1)<th_m(:,2)
+function th_m = border_angles(params_incl_dep,plotting)
     
-    th_m = border_angles_segm1(input,plotting);
+    th_m = border_angles_segm1(params_incl_dep,plotting);
     
     cond_single_maxmin = (length(th_m) == 1);
     if cond_single_maxmin
@@ -16,7 +18,7 @@ function th_m = border_angles(input,plotting)
         end % if extreme is around th == 0
         return
     else
-        nfold = input.nfold;
+        nfold = params_incl_dep.nfold;
 %         nfold = nfold(1);
         is_nfold_odd = mod(nfold ,2)~=0;
         segment_width = 2*pi/nfold;
@@ -59,14 +61,14 @@ end % func main
 
 %% border_angles_segm1
 % assumes no offset angle
-function th_m = border_angles_segm1(input,plotting)
+function th_m = border_angles_segm1(params_incl_dep,plotting)
     
-    nfold = [input.nfold];
+    nfold = [params_incl_dep.nfold];
     nfold = nfold(1);
-    delta = [input.soaIE];
+    delta = [params_incl_dep.soaIE];
     delta = delta(1);
-    assert(all(([input.nfold]-nfold)==0),'too many inclination dpendent interfaces specified. Check also border_angles>border_angles_segm1.')
-    assert(all(([input.soaIE]-delta)==0),'too many inclination dpendent interfaces specified. Check also border_angles>border_angles_segm1.')
+    assert(all(([params_incl_dep.nfold]-nfold)==0),'too many inclination dpendent interfaces specified. Check also border_angles>border_angles_segm1.')
+    assert(all(([params_incl_dep.soaIE]-delta)==0),'too many inclination dpendent interfaces specified. Check also border_angles>border_angles_segm1.')
     
     syms th tangline(th) dtangline(th)
     tangline = cos(th) / (1+delta*cos(nfold*th) );

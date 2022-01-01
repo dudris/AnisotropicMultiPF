@@ -13,34 +13,23 @@ in = varargin{1};
     
 in.nOP = Assign_nOP_from_ICcode(in.ICcode);
 
-% [in.IE,in.is_locally_isotropic,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.ind_is_solid,in.PFori);
-[in.IE,in.GBmobility,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
+[in.IE,in.GBmobility,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori,IE_aniso_minmax] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
 
-% in.GBmobility = 7.5e-16*ones(size(in.IE));
+IE_minmax = get_IEminmax(in.IE,in.is_locally_aniso_IE,IE_aniso_minmax);
+in.IEinit = determineIEinit(IE_minmax,in.IE,in.model);
 
-in.IEinit = determineIEinit(in.intf.IE_phases(:),in.model,in.intf,in);
-% decides on how maxmin IE are treated
-IEresh = mean(in.IE,2);
+[in.kpp0, in.gam0, in.m, in.Lij, in.IWs, gsq] = get_PF_parameters(in.model, in.IE, in.GBmobility, in.IW,in.IEinit);
 
+if in.is_inclination_dependent_IE
+    assert(~in.intf.isStrongAniso,'Only weak anisotropy approximation was validated. Set in.intf.isStrongAniso=false and rerun.')
+    in.A = 9/2*gsq; %to simplify anisotropy expression in gamma 
+    if strcmp(in.model,'IWc') || strcmp(in.model,'IWvK')
+        in.soaKP = in.intf.params_incl_dep.soaIE; % strength of anistropy of kappa equals that of interface energy
+    elseif strcmp(in.model,'IWvG')
+        in.soaKP = nan;
+    end
+end % if incl. dep. IE
 
-if (~in.is_inclination_dependent_IE && ~in.is_misori_dependent ) % isotropic, single interface type
-    [in.kpp0, in.gam0, in.m, in.Lij,in.IWs] = GetPFparamsIsotropic(IEresh, in.GBmobility ,in.IW);
-    
-elseif ~in.is_inclination_dependent_IE && in.is_misori_dependent % pairwise isotropic
-    [in.m, in.Lij, in.kpp0, in.gam0, in.IWs] = GetPFparamsMisorientationOnly(in.model,IEresh, in.GBmobility ,in.IW,in.IEinit);
-    
-elseif in.is_inclination_dependent_IE && in.is_misori_dependent % inclination dependent multiPF
-    [in.m, in.Lij, in.kpp0, in.gam0, in.soaKP, in.IWs, in.A] = GetPFparamsAnisoWeak(in.model,IEresh, in.GBmobility ,in.IW,in.IEinit, in.intf.params_incl_dep.soaIE);
-    
-%     error('Mighty creator asks: is this really implemented? ... in.is_inclination_dependent_IE=true & in.is_misori_dependent=true')
-elseif in.is_inclination_dependent_IE && in.intf.isStrongAniso
-    [in.m, in.Lij,  in.kpp0, in.gam0, in.soaKP, in.soaGM,in.IWout] = GetPFparamsAnisoStrong(in.model,IEresh, in.GBmobility ,in.IW,in.IEinit);
-    in.IE = mean(IE,2); % ??
-    
-elseif ~in.intf.isStrongAniso || in.is_misori_dependent
-    [in.m, in.Lij, in.kpp0, in.gam0, in.soaKP, in.IWs,in.A] = GetPFparamsAnisoWeak(in.model,IEresh, in.GBmobility ,in.IW,in.IEinit, in.intf.params_incl_dep.soaIE);
-    
-end
 assert(all(in.gam0)>=0.52 & all(in.gam0)<=40,'some value of gam0 outside interval (0.52,40)')
 clear IEresh
 
@@ -48,9 +37,6 @@ if length(varargin) == 2 && ~isempty(varargin{2})
     in.Courant_nr = varargin{2};
 else % length(varargin) ~= 2 OR isempty(varargin{2})
     in.Courant_nr = GetCourantNumber(in.model,in.is_inclination_dependent_IE,in.intf);
-%     in.Courant_nr=0.05;
-    % Courant_nr=0.05;
-    % Courant_nr = Courant_nr*0.5;
 end
 
 % find maximal value of anisotropy function in L
@@ -68,7 +54,6 @@ else
     in.tsteptsctr = int16(floor(linspace(1,in.Ndt,in.ctrcnt)));
 end
     
-
 if in.outputAtChckpt{1}
     tsteptsChckpt = int16(floor(linspace(1,in.Ndt,(in.outputAtChckpt{2}+1))));
     in.outputAtChckpt{3} = tsteptsChckpt(2:end);
@@ -78,7 +63,6 @@ end
 assert(size(in.IE,1)==in.nOP*(in.nOP-1)/2,['unexpected number of interfaces declared, length(IE)=' num2str(length(in.IE)) ])
 
 end % func
-
 
 
 %% GetCourantNumber
@@ -115,7 +99,6 @@ cond_no_or_weak_aniso = ~is_inclination_dependent_IE || (is_inclination_dependen
         end
         
         
-        
 %         % {3fold ; 4fold  ; 6fold } - fits not applicable for soa>0.4 (4fold)
 %         polyparams = {[2.1362   -1.9472    0.5083] ; [1.9074   -1.6546    0.3988] ; [ 14.9730  -19.9730   10.7406   -2.9487    0.3759] };
 %         if intf.params_incl_dep.nfold == 3
@@ -132,108 +115,22 @@ cond_no_or_weak_aniso = ~is_inclination_dependent_IE || (is_inclination_dependen
 
 end % func
 
-%% AssignGPdifferencePrefactor
-function pref_GP_diff = AssignGPdifferencePrefactor(nOP,PF_to_conserve)
-    pref_GP_diff = -ones(nOP,2);
-    pref_GP_diff(PF_to_conserve{1},1) =1;
-    pref_GP_diff(PF_to_conserve{2},2) =1;
+
+%% 
+function IE_minmax = get_IEminmax(IEs,is_locally_aniso_IE,IE_aniso_minmax)
+
+IE_min_all = IEs;
+IE_max_all = IEs;
+
+if any(is_locally_aniso_IE)
+    IE_min_all(is_locally_aniso_IE) = IEs(is_locally_aniso_IE)*IE_aniso_minmax(1);
+    IE_max_all(is_locally_aniso_IE) = IEs(is_locally_aniso_IE)*IE_aniso_minmax(2);
 end
 
-%% determineIEinit
-function IEinit = determineIEinit(IE_phases,model,intf,in)
-IE_phases = unique(IE_phases(~isnan(IE_phases)));
-    if strcmp(model,'IWc')
-%         if min(IE_phases)/max(IE_phases)<0.2
-%             IEinit = 0.5*max(IE_phases);
-%         else
-%             IEinit = max(IE_phases);
-%         end
-%         IEinit = min(IE_phases); % only working for cca 0.45<IEratio<5
-%         IEinit = max(IE_phases); % working for cca 0.0.03<IEratio<22 
-%         IEinit = 0.5;
-        IEinit = mean(IE_phases); % works well for interval IEratio cca 0.03 to 45
-    
-    elseif strcmp(model,'IWvG')
-% % %         IEinit = determineIEinit_varIW(IW,intf,plotting);
-            
-        if any(intf.is_incl_dep_IE) % inclination dependent
-            % taking mean IE to compute mean PF parameters
-            if strcmp(in.PFpar_compspec,'mean')
-                IEinit = determineIEinit_varIW(IE_phases); 
-            % taking into account largest&smallest aniso IE to compute mean PF parameters
-            elseif strcmp(in.PFpar_compspec,'fullaniso')
-                % maximal reached aniso energy is meanIE*(1 + soaIE)
-                maxIEaniso = max(intf.IE_phases(intf.is_incl_dep_IE))*(1 + intf.params_incl_dep.soaIE);
-                % minimal reached aniso energy is meanIE*(1 - soaIE)
-                minIEaniso = min(intf.IE_phases(intf.is_incl_dep_IE))*(1 - intf.params_incl_dep.soaIE);
-                % some other isotropic interface can have smaller IE
-                maxIE = max([maxIEaniso, intf.IE_phases(~intf.is_incl_dep_IE)]);
-                minIE = min([minIEaniso, intf.IE_phases(~intf.is_incl_dep_IE)]);
-                IEminmax =  [minIE, maxIE];
-                % minimal and maximal IE of the system needed
-            end % PF par computation specification
-            
-        else
-            IEminmax =  [min([intf.IE_phases]), max([intf.IE_phases])];
-        end % if inclination dep
-        IEinit = determineIEinit_varIW(IEminmax);
-        
-    elseif strcmp(model,'IWvK')
-        
-        if any(intf.is_incl_dep_IE) % inclination dependent
-            % taking mean IE to compute mean PF parameters
-            if strcmp(in.PFpar_compspec,'mean')
-                IEinit = min(intf.IE_phases);
-            elseif strcmp(in.PFpar_compspec,'fullaniso')
-    %         to account for the smallest with inclination dep. below
-                % minimal reached aniso energy is meanIE*(1 - soaIE)
-                minIEaniso = min(intf.IE_phases(intf.is_incl_dep_IE))*(1 - intf.params_incl_dep.soaIE);
-                % some other isotropic interface can have smaller IE
-                IEinit = min([minIEaniso, intf.IE_phases(~intf.is_incl_dep_IE)]);
-            end% PF par computation specification
-        else
-            IEinit = min(intf.IE_phases);
-        end % if inclination dep
-        
-    end % if model
-end
-%% determineIEinit_varIW
-% find the most convenient IEinit - such that gamma is within reasonable
-% bounds irrespective of the ratio of IEmax/IEmin
-function SIGMA_INIT = determineIEinit_varIW(IE_phases)
-    if length(unique(IE_phases)) == 1
-        SIGMA_INIT = unique(IE_phases);
+IE_minmax(1) = min(IE_min_all);
+IE_minmax(2) = max(IE_max_all);
 
-    else
-        % G = g(gamma)
-        G1 = 0.098546; % gamma = 0.52
-        G2 = 0.765691 ; %  gamma=40
-        assert(min(IE_phases)/max(IE_phases)>G1/G2,'input>determineIEinit_varIW msg: IEmin/IEmax too small')
-        IEinit_lim(1) = max(IE_phases)*sqrt(2/9)/G2;
-        IEinit_lim(2) = min(IE_phases)*sqrt(2/9)/G1;
-        assert(IEinit_lim(1)<IEinit_lim(2),'input>determineIEinit_varIW msg: something is wrong, IEinit_lim(1)>=IEinit_lim(2)')
-    %     SIGMA_INIT = mean(IEinit_lim);
-        SIGMA_INIT = IEinit_lim(1)+0.1*(IEinit_lim(2)-IEinit_lim(1));
-    end% if isotropic
-end% func
-
-% %% get_IEresh
-% function IEresh = get_IEresh(in)
-%     
-%     if in.is_inclination_dependent_IE
-%         if strcmp(in.model,'IWc')
-%             IEresh = mean(in.IE,2);
-%             
-%         elseif strcmp(in.model,'IWvG')
-%             IEresh = max(in.IE,[],2);
-%             
-%         elseif strcmp(in.model,'IWvK')
-%             IEresh = min(in.IE,[],2);
-%         end
-%     else
-%         IEresh = in.IE(:);
-%     end
-% end
+end % func
 
 %% GetPFparameters 
 function [kpp0, gam0, m, L,IWout] = GetPFparamsIsotropic(IEres, GBmobility ,IWin)
@@ -290,36 +187,6 @@ function [m, L, kpp0, gam0, soaKP, IWout, A] = GetPFparamsAnisoWeak(model,IEres,
         A = nan;
     end %if
 end % func GetPFparamsAnisoWeak
-
-function [m, L,  kpp0, gam0, soaKP, soaGM,IWout] = GetPFparamsAnisoStrong(model,IEres, GBmobility ,IWin,IEinit)
-    if any(size(IEres)~=size(GBmobility))
-        GBmobility = ones(size(IEres))*GBmobility(1);
-    end
-    if strcmp(model,'IWc')
-        % check reshape for more PFs
-        [kpp00, gam00,~, m, L] = parameters(IEres, GBmobility ,IWin,IEinit);
-        L = mean(L); % especially here
-        % !!!! should not regularized anisotropy function be used here to compute the soa's????
-        soaKP = (kpp00(:,1)-kpp00(:,2))/(kpp00(:,1)+kpp00(:,2));
-        soaGM = (gam00(:,1)-gam00(:,2))/(gam00(:,1)+gam00(:,2)); % (max-min)/(max+min)
-        kpp0 = mean(kpp00,2);
-        gam0 = mean(gam00,2);
-        IWout = IWin;
-    elseif strcmp(model,'IWvG')
-        [kpp00, gam00, m, L, IWout, ~] = parameters_varIW(IEres,GBmobility,IWin,IEinit);
-        soaKP = nan;
-        soaGM = (gam00(:,1)-gam00(:,2))/(gam00(:,1)+gam00(:,2)); % (max-min)/(max+min)
-        kpp0 = mean(kpp00,2);
-        gam0 = mean(gam00,2);
-    elseif strcmp(model,'IWvK')
-        error('Meaningless specification: is_StrongAniso=true but model=IWvK. Set false.')
-    end
-    
-    if max(gam0)>40
-        error('some gam0 parameter larger than 4 - check it out')
-    end
-end % func GetPFparamsAnisoStrong
-
 
 function [kpp0, gam0, m, Lij,IWs] = parameters_IWvK(IEresh, GBmobility ,IWin,IEinit)
     gam0 = 1.5;
