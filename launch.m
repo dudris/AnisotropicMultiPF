@@ -45,4 +45,24 @@ IWmin = 1e-9; % in meters; no interface will be narrower than IWmin
 IEinit = determineIEinit(IEminmax,IEs,model);
 [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin, IEinit);
 
+%% EXAMPLE - visualization of time evolution of area
+% usage of get_sim_timeline function
+
+clear
+addpath('input\examples\','solver\','input\')
+
+in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
+in.plotcond = false; % turn off plotting during simulation
+in.ctrcnt = 40; % define number of output points 
+in = input_calc_PFpar_dt(in);
+[p,A,F,in] = run_simulation(in);
+
+[t_ctr, t_ctr_p]= get_sim_timeline(in);
+figure(1)
+plot(t_ctr,A,'o-')
+xlabel('time (s)')
+ylabel('area fraction')
+legend('matrix','bottom circle','top circle','Location','east')
+
+
 
