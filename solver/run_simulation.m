@@ -392,17 +392,14 @@ while simulation_proceeds
         end
         
         if in.is_inclination_dependent_IE && tstep > in.precycle
-            ind_ori_exists = find(in.is_locally_aniso_IE);
-            ind_ori_exists = ind_ori_exists(1);
-%             plot_basic_info(sumpsq,p_new,ori{ind_ori_exists},kappa,nnl{ind_ori_exists},size2D,tstep,zeros(simsize))
-            plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'sumpsqpsq',partoplot_nm,'xi_1','\xi_2'} , size2D, 2,false)
+            plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'\Sigma\eta_i^2\eta_j^2',partoplot_nm,'\eta_1','\eta_2'} , size2D, 2,false)
             
         elseif ~in.is_inclination_dependent_IE  || tstep <=in.precycle
             if in.nOP == 3
-                plot2D_from_lin_2xn(1, {sumpsq,partoplot,ones(simsize), p{1},p{2},p{3}},{'sumpsqpsq',partoplot_nm,'blank space','xi_1','\xi_2','\xi_3'} , size2D, 3,false)
+                plot2D_from_lin_2xn(1, {sumpsq,partoplot,ones(simsize), p{1},p{2},p{3}},{'\Sigma\eta_i^2\eta_j^2',partoplot_nm,'blank space','\eta_1','\eta_2','\eta_3'} , size2D, 3,false)
             elseif in.nOP==2
                 
-                plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'sumpsqpsq',partoplot_nm,'xi_1','\xi_2'} , size2D, 2,false)
+                plot2D_from_lin_2xn(1, {sumpsq,partoplot, p{1},p{2}},{'\Sigma\eta_i^2\eta_j^2',partoplot_nm,'\eta_1','\eta_2'} , size2D, 2,false)
             end
         end
         
@@ -779,7 +776,7 @@ function [anisoPAR, danisoPAR, ddanisoPAR] = CalcAnisotropyFunc(in,lim_forbb_ang
         danisoPAR = dfIEijfun(ori,soa);
     else % Omega>1
 %         have th_m global and function [anisoPAR, danisoPAR]
-        assert(~in.all_expr_anal,'all_expr_anal = true BUT function ''calc_strong_reg_anisofun'' does not return 2nd derivative needed for analytic expressions.')
+%         assert(~in.all_expr_anal,'all_expr_anal = true BUT function ''calc_strong_reg_anisofun'' does not return 2nd derivative needed for analytic expressions.')
         [anisoPAR , danisoPAR] = calc_strong_reg_anisofun(ori, lim_forbb_ang,in.intf.params_incl_dep,soa,false);
     end
     
