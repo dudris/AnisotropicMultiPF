@@ -1,4 +1,11 @@
-% [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(input)
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(input,offset_ang_included)
 function [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(input, offset_ang_included)
 % [fIEijfun,dfIEijfun,ddfIEijfun] = AssignAnisotropyFunction(codeIEaniso,is_isotropic,nfold,offset_ang)
     soaIE = input.soaIE;

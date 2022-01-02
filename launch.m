@@ -1,3 +1,10 @@
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+
 %% EXAMPLE - run a custom simulation defined in make_input.m
 clear 
 addpath('input\','solver\')
@@ -20,7 +27,6 @@ addpath('input\examples\','solver\','input\')
 % in = input_wulff; % IWvK, Omega=5, fourfold
 % in = input_compensated_aniso; % IWc, Omega=0.6, fourfold
 
-
 % compute model parameters and time step
 in = input_calc_PFpar_dt(in);
 % run the simulation
@@ -38,3 +44,5 @@ IWmin = 1e-9; % in meters; no interface will be narrower than IWmin
 
 IEinit = determineIEinit(IEminmax,IEs,model);
 [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin, IEinit);
+
+

@@ -1,11 +1,19 @@
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
 %% AssignInterfaceProperties
-% [IE,is_locally_isotropic] = AssignInterfaceProperties(nOP,intf,ind_is_solid)
+% [IE,GBmobility,is_locally_aniso_IE,is_locally_aniso_L,misori,IE_aniso_minmax] = AssignInterfaceProperties(nOP,intf,PFori, PFphase)
 % - to each pair-wise interface assigns mean IE, misorientation angles and a bool containing information whether that interface is inclination dependent
 % - for nOP there are npairs = (nOP-1)nOP/2 interfaces
 % IE                         ... vector of mean interface energies size(IE) = [npairs,1],
 % is_locally_aniso_IE ... vector of bools,  size(is_locally_aniso_IE) = [npairs,1]
 % is_locally_aniso_L ... vector of bools,  size(is_locally_aniso_L) = [npairs,1]
 % misori                 ... vector of misorientation angles,  size(misori) = [npairs,1]
+% IE_aniso_minmax... minimal and maximal interface energy in the system
 
 function [IE,GBmobility,is_locally_aniso_IE,is_locally_aniso_L,misori,IE_aniso_minmax] = AssignInterfaceProperties(nOP,intf,PFori, PFphase)
     npairs = nOP*(nOP-1)/2;

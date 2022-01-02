@@ -1,4 +1,11 @@
-% function th_m = border_angles(params_incl_dep,plotting)
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% function th_m = border_angles(params_incl_dep,plotting)
 %   - returns borders of interval of forbidden angles
 %   - params_incl_dep is a field in input structure 'in': in.intf.params_incl_dep
 %   - for odd nfold th_m(:,1)<th_m(:,2)

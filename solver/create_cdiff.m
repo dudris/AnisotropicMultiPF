@@ -1,3 +1,11 @@
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% cdiff = create_cdiff(systemsize,spacing,direction) 
 % for x direction derivative systemsize is the number of columns and the
 % matrix is applied as S*cdiff
 % for y direction derivative systemsize is the number of rows and the

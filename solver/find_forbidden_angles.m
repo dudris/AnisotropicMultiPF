@@ -1,4 +1,11 @@
-% cond_forb_ang = find_forbidden_angles(th,th_m,input)
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% cond_forb_ang = find_forbidden_angles(th,th_m,input)
 % th_m ... limiting angles in individual segments, size(th_m) = [nfold, 2]
 % input ... in.intf.params_incl_dep
 function cond_forbb_ang = find_forbidden_angles(th,th_m,input)

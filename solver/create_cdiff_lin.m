@@ -1,4 +1,11 @@
-% cdiff = create_cdiff_lin(systemsize,spacing,direction,BCs)
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% cdiff = create_cdiff_lin(systemsize,spacing,direction,BCs)
 % ... creates finite differences matrix cdiff, size(cdiff) = [Nx*Ny Nx*Ny]
 % ... cdiff stands for partial derivative operator in x, y direction and also
 % for 2nd order derivatives, i.e. xx, xy and yy

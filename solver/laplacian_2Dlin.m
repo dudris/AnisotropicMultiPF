@@ -1,4 +1,11 @@
-% lap = laplacian_2Dlin(systemsize,spacing,StencilType,BCs)
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Three strategies of parameters assignment
+% in multi phase field model of grain growth with anisotorpic grain boundary properties”, Mendeley Data, 
+% v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
+% Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% 
+%% lap = laplacian_2Dlin(systemsize,spacing,StencilType,BCs)
 % - systemsize = [Nx Ny], where
 %         Nx is number of gridpoints in x-dir (i.e. columns in system matrix)
 %         Ny is number of gridpoints in y-dir (i.e. rows in system matrix)
