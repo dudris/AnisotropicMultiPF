@@ -1,17 +1,18 @@
 %% get_PF_parameters
-% [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin)
+% [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin, IEinit)
 % - the narrowest interface in models with variable interface width to be IWmin
 % 
 % INPUT
-%   model ... string vector, either 'IWc', 'IWvG' or 'IWvK' (as in Minar, !!!, 2022)
+%   - model ... string vector, either 'IWc', 'IWvG' or 'IWvK' (as in Minar, !!!, 2022)
 %       'IWc' ... model with CONSTANT interafce width (as in Moelans, Phys.Rev.B, 2008)
 %       'IWvG' ... model with VARIABLE interafce width and all anisotropy in parameter GAMMA (as in Ravash, !!!!, 2017)
 %       'IWvK' ... model with VARIABLE interafce width and all anisotropy in parameter KAPPA (as in Minar, !!!, 2022)
-%   IEs ... vector, interface energies for which the phase field (PF) parameters are determined
-%   GBmobility ... vector, grain boundary mobilities for which the phase field (PF) parameters are determined
-%   IWmin ... scalar, minimal interface width in meters
+%   - IEs ... vector, interface energies for which the phase field (PF) parameters are determined
+%   - GBmobility ... vector, grain boundary mobilities for which the phase field (PF) parameters are determined
+%   - IWmin ... scalar, minimal interface width in meters
+%   - IEinit ... scalar, returned by function 'determineIEinit'
 % note that it should be size(IEs)==size(GBmobility)
-
+% 
 % OUTPUT
 %   - kpp0 ... vector, size(kpp0)=size(IEs), values of parameter kappa for
 %   each interface (a constant in IWvG)
@@ -26,10 +27,6 @@
 %   values of gamma at interfaces with inclination-dependent IE (not used in IWvK)
 
 function [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin, IEinit)
-
-% IEinit = determineIEinit(IEs,model);
-
-% [kpp0, gam0, m, L, IWout, gsq] = parameters(model,IEs,GBmobility,IWmin,IEinit);
 
     if strcmp(model,'IWc')
         IWout = IWmin;

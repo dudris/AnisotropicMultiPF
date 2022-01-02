@@ -1,19 +1,18 @@
 %% determineIEinit
+% IEinit = determineIEinit(IEminmax,IEs,model)
+% - the function checks that the anisotropy is not too strong to compute
+% the parameters
+% 
 % INPUT
-%   IEs ... interface energy of every pair-wise interface in J/m^2
-%       - if any(intf.is_incl_dep_IE)
-%           - size(IEs) = [npairs,2]
-%           - k-th interface has inclination-dependent IE, then
-%           IEs(k,1) = minimal reached IE, IEs(k,2) = maximal reached IE
-%       else 
-%           size(IEs) = [npairs,1]
+%   - IEminmax ... minimal and maximal interface energy in the system (may not be trivial with inclination dependence)
+%   - IEs ... mean interface energy of every pair-wise interface
+%   - model ... either of 'IWc', 'IWvG' or 'IWvK', see Paper for more details
+% OUTPUT
+%   - IEinit ... scalar
 %       - if all interfaces have equal IE, then IEinit=unique(IEs)
 %       irrespective of the model
 
 function IEinit = determineIEinit(IEminmax,IEs,model)
-
-% IEminmax(1) = min(min(IEs));
-% IEminmax(2) = max(max(IEs));
 
     if strcmp(model,'IWc')
         g_function	= [0.098546		0.765691]'; % g(gamma) for gamma=0.52 and 40
