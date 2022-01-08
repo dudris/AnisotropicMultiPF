@@ -93,7 +93,8 @@ intf.is_incl_dep_L =  false;
 % PFphase = [1, 1, 1]; % 
 % intf.mob_phases = 7.5e-16; % m^4/Js
 % intf.IE_phases = [0.3]; %  the types of interfaces 
-% intf.is_incl_dep = [false]; % is [s-l , s-s] inclination dependent
+% intf.is_incl_dep_IE = false;
+% intf.is_incl_dep_L = false;
 
 % PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
 % PFphase = [1, 2, 2]; % 
@@ -110,7 +111,7 @@ is_misori_dependent = length(unique(intf.IE_phases(:)))>1;
 %% inclination-dependent properties
 if is_inclination_dependent_IE % currently only 1 type of inclination-dependence assumed
     intf.params_incl_dep.codeIEaniso = 'IEanisofun_1';
-    PFpar_compspec = 'fullaniso'; % 'mean' or 'fullaniso' procesing of IE, IWc is always 'mean'
+    PFpar_compspec = 'fullaniso_reg'; % 'mean' or 'fullaniso' procesing of IE, IWc is always 'mean'
     intf.isStrongAniso = false; % set 'false' if values of parameter gamma remain within approx 0.8-3. Not systematically validated with isStrongAniso=true
     intf.params_incl_dep.nfold = 4 ;
     intf.params_incl_dep.Omega = 0.6; % normalized strength of anisotropy
