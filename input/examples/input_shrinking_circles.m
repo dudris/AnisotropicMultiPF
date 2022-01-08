@@ -19,7 +19,7 @@ function input = input_shrinking_circles
 Nx = 100; % number of grid points in x direction
 Ny = 200; % number of grid points in y direction
 precycle = 20; % needed for inclination-dependent simulations. Number of time steps run with isotorpic model to make interface a little diffuse
-simtime = 0.03; % simulation time in seconds
+simtime = 0.02; % simulation time in seconds
 
 IW = 1e-9; % minimal inteface width in meters
 IWpts = 7; % number of points in the interface
