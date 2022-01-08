@@ -75,7 +75,7 @@ end % func
 %% GetCourantNumber
 function C = GetCourantNumber(model,is_inclination_dependent_IE,intf)
 
-cond_no_or_weak_aniso = ~is_inclination_dependent_IE || (is_inclination_dependent_IE && intf.params_incl_dep.Omega<=1);
+    cond_no_or_weak_aniso = ~is_inclination_dependent_IE || (is_inclination_dependent_IE && intf.params_incl_dep.Omega<=1);
     minmaxratio = min(intf.IE_phases)/max(intf.IE_phases);
     if cond_no_or_weak_aniso
         if minmaxratio<=0.2 && minmaxratio>=0.129
@@ -138,71 +138,6 @@ IE_minmax(1) = min(IE_min_all);
 IE_minmax(2) = max(IE_max_all);
 
 end % func
-
-%% GetPFparameters 
-function [kpp0, gam0, m, L,IWout] = GetPFparamsIsotropic(IEres, GBmobility ,IWin)
-    gam0 = 1.5;
-    m = 6*IEres/IWin;
-    kpp0 = (3/4)*IEres*IWin;
-    L = (4/3)*GBmobility/IWin;
-    IWout = IWin;
-%     if is_with_constant_IW
-%         [kpp0, gam0,~, m, L] = parameters(IEres, GBmobility ,IWin,IEinit);
-%         IWout = IWin;
-%     else
-%         % kpp0 = kappa ... constant computed from IWin and IEinit
-%         [kpp0, gam0, m, L, IWout, ~] = parameters_varIW(IEres,GBmobility,IWin,IEinit);
-%     end% if
-    
-%     % test
-%     [gamma,g_function,sqrt_f0_function] = load_gfunc_sqrtf0;
-%     ggam = interp1(gamma,g_function,gam0_inp);
-%     sqrtf0gam = interp1(gamma,sqrt_f0_function,gam0_inp);
-%     rel_diff_from_expected.m = abs(6-1/ggam/sqrtf0gam)/6 ;
-%     rel_diff_from_expected.kpp0 = abs(3/4-sqrtf0gam/ggam)/(3/4) ;
-%     rel_diff_from_expected.L = abs(4/3-ggam/sqrtf0gam)/(4/3) ;
-end % func GetPFparamsIsotropic
-
-function [m, Lij, kpp0, gam0, IWout] = GetPFparamsMisorientationOnly(model,IEres, GBmobility ,IWin,IEinit)
-    if strcmp(model,'IWc')
-        [kpp0, gam0,~, m, Lij] = parameters(IEres, GBmobility ,IWin,IEinit);
-         IWout = IWin;
-         assert(all(gam0>=0.52) && all(gam0<=40),['IWc, error in ''GetPFparamsMisorientationOnly'' : IEinit = ' num2str(IEinit) ' and some of gam0 < 0.52 or gam0 > 40. gam0 = [' num2str(gam0) ']'])
-    elseif strcmp(model,'IWvG')
-        % kpp0 = kappa ... constant computed from IW and IEinit
-        [kpp0, gam0, m, Lij, IWout, ~] = parameters_varIW(IEres,GBmobility,IWin,IEinit);
-    elseif strcmp(model,'IWvK')
-        % gam0 = 1.5
-        [kpp0, gam0, m, Lij,IWout] = parameters_IWvK(IEres, GBmobility ,IWin,IEinit);
-    end %if
-end
-
-function [m, L, kpp0, gam0, soaKP, IWout, A] = GetPFparamsAnisoWeak(model,IEres, GBmobility ,IWin,IEinit, soaIE)
-    if strcmp(model,'IWc')
-        [kpp0, gam0,gsq, m, L] = parameters(IEres, GBmobility ,IWin,IEinit);
-        soaKP = soaIE;
-         A = 9/2*gsq; %to simplify anisotropy expression in gamma for small anisotropies
-         IWout = IWin;
-    elseif strcmp(model,'IWvG')
-        % kpp0 = kappa ... constant computed from IW and IEinit
-        [kpp0, gam0, m, L, IWout, gsq] = parameters_varIW(IEres,GBmobility,IWin,IEinit);
-        soaKP = nan;
-        A = 9/2*gsq;
-    elseif strcmp(model,'IWvK')
-        [kpp0, gam0, m, L,IWout] = parameters_IWvK(IEres, GBmobility ,IWin,IEinit);
-        soaKP = soaIE;
-        A = nan;
-    end %if
-end % func GetPFparamsAnisoWeak
-
-function [kpp0, gam0, m, Lij,IWs] = parameters_IWvK(IEresh, GBmobility ,IWin,IEinit)
-    gam0 = 1.5;
-    m = 6*IEinit/IWin;
-    kpp0 = (9/2)*IEresh.^2/m;
-    IWs = 6*IEresh/m;
-%     IWs = (2/3)*IEresh/m;
-    Lij = (4/3)*GBmobility./IWs;
-end% func
 
 %% Assign_nOP_from_ICcode
 function nOP = Assign_nOP_from_ICcode(ICcode)
