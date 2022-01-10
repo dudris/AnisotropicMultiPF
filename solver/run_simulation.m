@@ -826,7 +826,7 @@ function [kappa_ij, gamma_ij] = ReplaceNaNs_kpp_gmm_ij(isStrongAniso,kappa_ij,kp
     end
 end% func ReplaceNaNs_kpp_gmm_ij
 %% CalcKappaGammaL_Add_kth_term
-function [kappa, gam, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam, L, gkL, in, p, i, j, k)
+function [kappa, gam_sumpsqpsq, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam_sumpsqpsq, L, gkL, in, p, i, j, k)
 % [kappa, gam_sumpsqpsq, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam_sumpsqpsq, L, gk, in, p, i, j, k);
     
     if in.nOP == 2
@@ -843,10 +843,10 @@ function [kappa, gam, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam, L, gkL, in, 
         
         if in.nOP == 2
             kappa = kappa_ij;
-            gam   = gamma_ij;
+            gam_sumpsqpsq   = gamma_ij;
         else 
             kappa = kappa + kappa_ij.*psqpsq_ij;
-            gam   = gam   + gamma_ij.*psqpsq_ij;
+            gam_sumpsqpsq   = gam_sumpsqpsq   + gamma_ij.*psqpsq_ij;
         end % if nOP
         
     elseif strcmp(in.model,'IWvG')
@@ -854,19 +854,21 @@ function [kappa, gam, L] = CalcKappaGammaL_Add_kth_Term(kappa, gam, L, gkL, in, 
         gamma_ij = gkL.g_ij{k};
         
         if in.nOP == 2
-            gam   = gamma_ij;
+            gam_sumpsqpsq   = gamma_ij;
         else 
-            gam   = gam   + gamma_ij.*psqpsq_ij;
+            gam_sumpsqpsq   = gam_sumpsqpsq   + gamma_ij.*psqpsq_ij;
         end % if nOP
         
     elseif strcmp(in.model,'IWvK')
-        gam   = 1.5;
+        gamma_ij   = 1.5;
         kappa_ij = gkL.k_ij;
         
         if in.nOP == 2
             kappa = kappa_ij;
+            gam_sumpsqpsq = gamma_ij;
         else 
             kappa = kappa + kappa_ij.*psqpsq_ij;
+            gam_sumpsqpsq   = gam_sumpsqpsq   + gamma_ij.*psqpsq_ij;
         end % if nOP
         
     end % if model
@@ -1062,16 +1064,11 @@ end % func CheckPValuesInInterval
 function [F_ctr, S_ctr] = CalcEnergyAreas(Fdens,p,gam_sumpsqpsq,sumgradpsq,sumpsqpsq,sumpsq,in,tstep,kappa)
 % Fdens ... interface energy density
 
-    if length(gam_sumpsqpsq)==1 % gam_sumpsqpsq is only scalar
-        gam_sumpsqpsq = sumpsqpsq*gam_sumpsqpsq;
-    end
-
     if in.nOP == 2
         Fdens = Fdens + in.m*(1/4 + gam_sumpsqpsq.*sumpsqpsq);
     else
         Fdens = Fdens + in.m*(1/4 + gam_sumpsqpsq);
-    end
-    
+    end    
     
 %     F_ctr(1,1) = 2*sum(Fdens(cond_singlePF_IEcalc))*(in.dx)^2; % single grain total IE
     F_ctr(1,1) = 2*sum(Fdens)*(in.dx)^2; % total IE

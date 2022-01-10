@@ -27,11 +27,10 @@ dx = IW/IWpts; % grid spacing in x direction
 dy = dx; % equidistant grid is assumed
 
 % switches
-model = 'IWc'; % either of 'IWc', 'IWvG' or 'IWvK', as described in the Paper
-
+model = 'IWvK'; % either of 'IWc', 'IWvG' or 'IWvK', as described in the Paper
 
 ctrcnt = 100; % output made at linspace(1,Ndt,ctrcnt)
-plotcond = true;
+plotcond = false; % plot phase fields and parameter fields during simulation at every ctrcnt time step
 plotDF = true; % if plotcond=true AND plotDF=true, driving force terms will be plotted individually
 solvermethod = '2Dlin';
 laplacianmethod = '9pt20'; % '9pt20', '9pt8', '5pt'
