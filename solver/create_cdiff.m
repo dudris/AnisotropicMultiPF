@@ -4,6 +4,8 @@
 % v1 http://dx.doi.org/10.17632/5wrv3ky9pp.1>, coupled to publication of the same name by 
 % Minar, Moelans submitted to Physical Review Materials in January 2022.
 % Distributed under GPLv3 license.
+% This project has received funding from the European Research Council (ERC) under the European Union's 
+% Horizon 2020 research and innovation programme (grant agreement n° 714754)
 % 
 %% cdiff = create_cdiff(systemsize,spacing,direction) 
 % for x direction derivative systemsize is the number of columns and the
