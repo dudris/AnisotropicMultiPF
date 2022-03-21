@@ -11,49 +11,58 @@
 clear 
 addpath('input\','solver\')
 
+% ___ creates input file 'in', type 'help make_input' for details
 in = make_input;
-% compute model parameters and time step
+% ___ adds model parameters and time step to 'in', type 'help input_calc_PFpar_dt' for details
 in = input_calc_PFpar_dt(in);
 
-[p,A,F,in] = run_simulation(in);
+% ___ run the simulation, type 'help run_simulation' for details
+[pctr,S,F,in] = run_simulation(in);
 
+% ___ visualize output
 figure(1)
-imagesc(p{2}), colorbar, axis equal
-% validate the energy output
-%1...total IE, 2 ... mean total IE
+imagesc(pctr{2}), colorbar
+    set(gca,'YDir','normal','DataAspectRatio',[1,1,1])
+    title('phase field 2')
+    xlabel('x (grid pts)')
+    ylabel('y (grid pts)')
     
 %% EXAMPLES - sample simulations from the Paper
-% in 'input\examples\' are ready-made input files with sample simulations
+% ___ in 'input\examples\' are ready-made input files with sample simulations
 % of the four experiments from the Paper
 clear
 addpath('input\examples\','solver\','input\')
 
-% uncomment the line corresponding to the simulation to be run
+% ___ uncomment the line corresponding to the simulation to be run
 % in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
 % in = input_trijunction; % IWvG, ratio 1/0.6=1.667
 % in = input_wulff; % IWvK, Omega=5, fourfold
 % in = input_compensated_aniso; % IWc, Omega=0.6, fourfold
 
-% compute model parameters and time step
+% ___ compute model parameters and time step
 in = input_calc_PFpar_dt(in);
-% run the simulation
-[p,A,F,in] = run_simulation(in);
+% ___ run the simulation
+[pctr,S,F,in] = run_simulation(in);
 
 %% EXAMPLE - only determination of parameters
-% see help comments of the functions below for more details
+% ___ see help comments of the functions below for more details
 clear 
-IEminmax = [0.1, 0.3]; % minimal and maximal interface energy in the system
-IEs = [0.3 0.3 0.2 0.1]; % interface energies of the pair-wise interfaces. 
-model = 'IWvG'; % either of 'IWc', 'IWvG' or 'IWvK'
+IEminmax = [0.1, 0.3]; % (J/m^2), minimal and maximal interface energy in the system
+IEs = [0.3 0.3 0.2 0.1]; % (J/m^2), interface energies of the pair-wise interfaces. 
+model = 'IWvG'; % either of 'IWc', 'IWvG' or 'IWvK', as described in the paper
 
-GBmobility = 7.5*1e-16*ones(size(IEs)); % interface mobility in m^4/Js
-IWmin = 1e-9; % in meters; no interface will be narrower than IWmin
+GBmobility = 7.5*1e-16*ones(size(IEs)); % (m^4/Js), interface mobility
+IWmin = 1e-9; % (m), no interface will be narrower than IWmin
 
+% ___ computation of phase field parameters and time step requires
+% appropriate value of initializing interface energy IEinit. More details
+% in Supplementary material of the Paper
 IEinit = determineIEinit(IEminmax,IEs,model);
+% ___ get phase field parameters, type help get_PF_parameters' for more 
 [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobility ,IWmin, IEinit);
 
-%% EXAMPLE - visualization of time evolution of area
-% usage of get_sim_timeline function
+%% EXAMPLE - visualization of time evolution of area in shrinking circles simulation 
+% ___ usage of supplementary get_sim_timeline function
 
 clear
 addpath('input\examples\','solver\','input\')
@@ -62,14 +71,16 @@ in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
 in.plotcond = false; % turn off plotting during simulation
 in.ctrcnt = 40; % define number of output points 
 in = input_calc_PFpar_dt(in);
-[p,A,F,in] = run_simulation(in);
+[pctr,S,F,in] = run_simulation(in);
 
+% ___ extract the simulation time from the input associated with output
+% checkpoints
 [t_ctr, t_ctr_p]= get_sim_timeline(in);
 figure(1)
-plot(t_ctr,A,'o-')
-xlabel('time (s)')
-ylabel('area fraction')
-legend('matrix','bottom circle','top circle','Location','east')
+    plot(t_ctr,S,'o-')
+    xlabel('time (s)')
+    ylabel('area fraction')
+    legend('matrix','bottom circle','top circle','Location','east')
 
 
 
