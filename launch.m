@@ -70,12 +70,14 @@ addpath('input\examples\','solver\','input\')
 in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
 in.plotcond = false; % turn off plotting during simulation
 in.ctrcnt = 40; % define number of output points 
-in = input_calc_PFpar_dt(in);
-[pctr,S,F,in] = run_simulation(in);
+in = input_calc_PFpar_dt(in); % compute PF parameters and time step
+[pctr,S,F,in] = run_simulation(in); % run the simulation
 
 % ___ extract the simulation time from the input associated with output
 % checkpoints
 [t_ctr, t_ctr_p]= get_sim_timeline(in);
+
+% ___ visualize time evolution of area fraction of individual phase fields
 figure(1)
     plot(t_ctr,S,'o-')
     xlabel('time (s)')
