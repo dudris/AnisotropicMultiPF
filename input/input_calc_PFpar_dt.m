@@ -8,25 +8,31 @@
 % Horizon 2020 research and innovation programme (grant agreement n° 714754).
 % 
 %% input_calc_PFpar_dt
-% input structure completion (preceded by in = inputfile_GGaniso)
-% calculates the PF parameters and time step length
-% USAGE:
-% mode 1: 
-%   in = input_calc_PFpar_dt(in)
-% mode 2: 
-%   in = input_calc_PFpar_dt(in,Courant_nr)
-%       if Courant_nr=[] a default value is used
+% - input structure completion (preceded by in = make_input)
+% - calculates the PF parameters and time step length
+% - USAGE:
+%   -mode 1: 
+%       -in = input_calc_PFpar_dt(in)
+%   -mode 2: 
+%       -in = input_calc_PFpar_dt(in,Courant_nr)
+%           if Courant_nr=[] a default value is used
 
 function in = input_calc_PFpar_dt(varargin)
 in = varargin{1};
-    
+
+% ___ determine number of phase fields automatically
 in.nOP = Assign_nOP_from_ICcode(in.ICcode);
 
+% ___ list of pair-wise interface specificators
 [in.IE,in.GBmobility,in.is_locally_aniso_IE,in.is_locally_aniso_L,in.misori,IE_aniso_minmax] = AssignInterfaceProperties(in.nOP,in.intf,in.PFori, in.PFphase);
 
+% ___ max and min interface nergy in the system
 IE_minmax = get_IEminmax(in.IE,in.is_locally_aniso_IE,IE_aniso_minmax);
+% ___ determine initializing interface eenrgy value such that the narrowest
+% interface width is in.IW
 in.IEinit = determineIEinit(IE_minmax,in.IE,in.model);
 
+% ___ get phase field parameters for every pair-wise interface from the input
 [in.kpp0, in.gam0, in.m, in.Lij, in.IWs, gsq] = get_PF_parameters(in.model, in.IE, in.GBmobility, in.IW,in.IEinit);
 
 if in.is_inclination_dependent_IE
@@ -42,6 +48,7 @@ end % if incl. dep. IE
 assert(all(in.gam0)>=0.52 & all(in.gam0)<=40,'some value of gam0 outside interval (0.52,40)')
 clear IEresh
 
+% ___ assign Courant number
 if length(varargin) == 2 && ~isempty(varargin{2})
     in.Courant_nr = varargin{2};
 else % length(varargin) ~= 2 OR isempty(varargin{2})
@@ -52,10 +59,12 @@ end
 % only 1 type of anisotorpy assumed
 maxLaniso = find_Lmax_analytically(in);
 
+% ___ determine time step length
 in.dt = in.Courant_nr*in.dx^2/max(maxLaniso*in.Lij.*in.kpp0);
 in.Ndt = round(in.simtime/in.dt,-1);
 in.anisoNdt =in.Ndt - in.precycle;
 
+% ___ time steps when output takes place
 if in.ctrcnt>in.Ndt
     in.tsteptsctr = int16(1:in.Ndt);
     warning('in.ctrcnt>in.Ndt, output length set to in.Ndt')
@@ -63,6 +72,7 @@ else
     in.tsteptsctr = int16(floor(linspace(1,in.Ndt,in.ctrcnt)));
 end
     
+% ___ time steps when phase fields are saved
 if in.outputAtChckpt{1}
     tsteptsChckpt = int16(floor(linspace(1,in.Ndt,(in.outputAtChckpt{2}+1))));
     in.outputAtChckpt{3} = tsteptsChckpt(2:end);
@@ -107,19 +117,6 @@ function C = GetCourantNumber(model,is_inclination_dependent_IE,intf)
             end
         end
         
-        
-%         % {3fold ; 4fold  ; 6fold } - fits not applicable for soa>0.4 (4fold)
-%         polyparams = {[2.1362   -1.9472    0.5083] ; [1.9074   -1.6546    0.3988] ; [ 14.9730  -19.9730   10.7406   -2.9487    0.3759] };
-%         if intf.params_incl_dep.nfold == 3
-%              iind = 1;
-%              C = polyval(polyparams{iind},intf.params_incl_dep.soaIE);
-%         elseif intf.params_incl_dep.nfold == 4
-%              iind = 2;
-%              C = polyval(polyparams{iind},intf.params_incl_dep.soaIE);
-%          elseif intf.params_incl_dep.nfold == 6
-%              iind = 3;
-%              C = polyval(polyparams{iind},intf.params_incl_dep.soaIE);
-%         end % if nfold
     end % if cond_no_or_weak_aniso
 
 end % func
