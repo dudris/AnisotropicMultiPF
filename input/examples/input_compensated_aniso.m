@@ -44,18 +44,22 @@ PauseAfterPlotting = false;
 PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 
 
-%% USAGE OF THE FOLLOWING SECTION
-% - uncomment the desired initial condition 'ICcond' and set the
+%% SPECIFICATION OF INITIAL CONDITION - USAGE OF THE FOLLOWING SECTION(S)
+% - initial condition with either 2 or 3 phase fields
+% - uncomment the desired initial condition 'ICcode' and set the
 % parameters 'ICparam' specifying details of the geometry
 % - units used are grid points
+% - for specification of inclination-dependent interfaceproperties see the
+% respective section
 % - the below variables must be specified
 %   - PFori ... size(PFori) = [1,nOP]
 %       - each phase field is assigned an orientation in polar angle (i.e. w.r.t. x axis)
+%       - first phase field assumed to have orientation 0
 %   - PFphases ... size(PFphases) = [1,nOP]
-%       - each phase field is assigned to a phase of a certain number
+%       - each phase field is assigned to a phase of certain number
 %       - number of phases = unique(PFphases)
 %   - intf ... struct aggregating interface properties
-%       - the below 4 variables are all matrices of size [numphases,numphases]
+%       - the below 4 variables are all matrices [numphases,numphases]
 %       - intf.IE_phases ... intetrface energy of distinct types of
 %       interfaces 
 %       - intf.mob_phases ... mobilities of distinct types of interfaces
@@ -63,7 +67,7 @@ PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 %       inclination dep. interface energy
 %       - intf.is_incl_dep_L ... boolean specifying which interfaces have
 %       inclination dep. mobility
-%% INITIAL CONDITION 2 PHASE FIELDS
+%% INITIAL CONDITION: 2 PHASE FIELDS
 %___ 'CircleInMatrix' ... ICparam = [centerx centery radius]
 ICcode = 'CircleInMatrix';
 ICparam = [Nx/2 , Nx/2 , Nx/3];
@@ -73,6 +77,7 @@ ICparam = [Nx/2 , Nx/2 , Nx/3];
 % ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
 % ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
 
+% ___ uncomment and modify if 2 phase fields are to be used
 PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
 PFphase = [1, 1]; % 
 intf.IE_phases = 1/3 ; 
@@ -80,7 +85,7 @@ intf.mob_phases = 7.5e-16; % m^4/Js
 intf.is_incl_dep_IE = true;
 intf.is_incl_dep_L =  true;
 
-%% INITIAL CONDITION 3 PHASE FIELDS
+%% INITIAL CONDITION: 3 PHASE FIELDS
 % ___ 'Tjunction' ... ICparam = [posSS_horizontal , posSL_vertical], 
 % ICcode = 'Tjunction';
 % ICparam = [Ny/2 , Nx/2];
@@ -89,12 +94,14 @@ intf.is_incl_dep_L =  true;
 % ICparam = [3/4*Nx , 3/4*Nx , Nx/5/sqrt(2) ; Nx/4 Ny/3 Nx/5/sqrt(2)]; 
 % ICparam = [0.5*Nx , 0.25*Ny , 0.3*Nx ; 0.5*Nx , 0.75*Ny , 0.3*Nx];
 
+% ___ uncomment and modify if there is 1 type of interface
 % PFori = [0,10,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
 % PFphase = [1, 1, 1]; % 
 % intf.mob_phases = 7.5e-16; % m^4/Js
 % intf.IE_phases = [0.3]; %  the types of interfaces 
 % intf.is_incl_dep = [false]; % is [s-l , s-s] inclination dependent
 
+% ___ uncomment and modify if there are 2 types of interfaces
 % PFori = [0,0,0]*(pi/180); % orientation of the PF [1,2,3,...], liquid has always 0
 % PFphase = [1, 2, 2]; % 
 % intf.IE_phases = 0.3*[nan , 1 ; 1 0.4 ]; % [1-1 , 1-2 ; 2-1 , 2-2]
@@ -102,46 +109,39 @@ intf.is_incl_dep_L =  true;
 % intf.is_incl_dep_IE = false(2);
 % intf.is_incl_dep_L = false(2);
 
-%% NO USER INPUT (process the interface properties)
+%% AUTOMATIC PROCESSING OF INTERFACE PROPERTIES
 nOP = Assign_nOP_from_ICcode(ICcode);
 is_inclination_dependent_IE = any(intf.is_incl_dep_IE(:));
 is_inclination_dependent_L = any(intf.is_incl_dep_L(:));
 is_misori_dependent = length(unique(intf.IE_phases(:)))>1;
-%% inclination-dependent properties
+%% INCLINATION-DEPENDENT INTERFACE PROPERTIES
 if is_inclination_dependent_IE % currently only 1 type of inclination-dependence assumed
-    intf.params_incl_dep.codeIEaniso = 'IEanisofun_1';
+    intf.params_incl_dep.codeIEaniso = 'IEanisofun_1'; % anisofun = 1+soaIE*cos(nfold*theta)
     PFpar_compspec = 'fullaniso'; % 'mean' or 'fullaniso' procesing of IE, IWc is always 'mean'
     intf.isStrongAniso = false; % set 'false' if values of parameter gamma remain within approx 0.8-3. Not systematically validated with isStrongAniso=true
     intf.params_incl_dep.nfold = 4 ;
     intf.params_incl_dep.Omega = 0.6; % normalized strength of anisotropy
     intf.params_incl_dep.soaIE = intf.params_incl_dep.Omega/(intf.params_incl_dep.nfold^2-1);
-%     intf.params_incl_dep.soaIE = 0.1;
-%     intf.params_incl_dep.Omega = intf.params_incl_dep.soaIE*(intf.params_incl_dep.nfold^2-1);
 end
 
 if is_inclination_dependent_L % currently only 1 type of inclination-dependence assumed
     intf.params_incl_dep.Lfun = @(phi) 1./(1-(intf.params_incl_dep.nfold^2-1)*intf.params_incl_dep.soaIE*cos(intf.params_incl_dep.nfold*phi));
     intf.params_incl_dep.override_IW_Lcorr = false; % 'true' to make Lfun the only anisotropy of L
-%     intf.params_incl_dep.LsoaIE = 0.1;
-%     intf.params_incl_dep.LOmega = intf.params_incl_dep.soaIE*(intf.params_incl_dep.nfold^2-1);
 else
     intf.params_incl_dep.override_IW_Lcorr = false; % 
 end
 
-% if is_misori_dependent
+%% DEVELOPER SETTINGS
 intf.params_misor_dep.code = 'none' ; % 'none' or 'readshockley'
-% intf.params_misor_dep.code = 'readshockley' ; % 'none' or 'readshockley'
-% intf.params_misor_dep.width = 15*(pi/180); % rad
-% end
-
-%% restrict DF to interace region only
+solvermethod = '2Dlin';
+laplacianmethod = '9pt20'; % '9pt20', '9pt8', '5pt'
+plotDF = false; % if plotcond=true AND plotDF=true, driving force terms will be plotted individually
+PlotAftertstep = Inf; % after selected timestep will plot at every timestep
+% restrict DF to interace region only
 % difference in value of interface-normal magnitude field - the smaller, the wider the interface region
 intf.limval.iso = 1e-12; % not expected to be varied much 
-% intf_limval_iso = 5e-3; % not expected to be varied much
 intf.limval.aniso.outer =  1e-6; %1e-4;
 intf.limval.aniso.inner = 5e-3; %1e-2 
-% intf.limval.aniso.outer =  1e-4; %;
-% intf.limval.aniso.inner = 1e-2; %1e-2 ; ; 
 %% check for input consistency
 
 validmodels =  categorical({'IWc', 'IWvG','IWvK'});
