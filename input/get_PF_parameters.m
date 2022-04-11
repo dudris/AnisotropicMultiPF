@@ -40,9 +40,9 @@ function [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobilit
 
     if strcmp(model,'IWc')
         IWout = IWmin;
-        % polynomial sqrt(f0)*g -> 1/gam; fitted for gamma 0.52-40
+        % ___ polynomial sqrt(f0)*g -> 1/gam; fitted for gamma 0.52-40
         prodgsqrtf0c_gaminv_coef = [103.397      -165.393      105.3469     -44.55661       24.7348     -11.25718      1.999642];
-        % polynomial 1/gam -> sqrt(f0(1/gam)); fitted for gamma 0.52-40
+        % ___ polynomial 1/gam -> sqrt(f0(1/gam)); fitted for gamma 0.52-40
         sqrtf0_gaminv_coef = [-0.072966     0.35784    -0.68325     0.63578    -0.48566     0.53703];
         
         m = 6*IEinit/IWmin;
@@ -57,11 +57,11 @@ function [kpp0, gam0, m, L, IWout, gsq] = get_PF_parameters(model,IEs, GBmobilit
         gsq = IEs.^2./kpp0/m;
         
     elseif strcmp(model,'IWvG')
-        % both fitted for 0.52 <= gamma <= 40
+        % ___ both fitted for 0.52 <= gamma <= 40
         gaminv_gsq_coef = [-5.73008      18.8615     -23.0557      7.47952      8.33568     -8.01224      2.00013];
         sqrtf0_gaminv_coef = [-0.072966     0.35784    -0.68325     0.63578    -0.48566     0.53703];
 
-        % iteration to find such gammas to give correct IE AND IWmin
+        % ___ iteration to find such gammas to give correct IE AND IWmin
         for ctr = 0:1
             if ctr == 0
                 IWiter = IWmin;
