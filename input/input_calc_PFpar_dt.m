@@ -64,12 +64,17 @@ in.dt = in.Courant_nr*in.dx^2/max(maxLaniso*in.Lij.*in.kpp0);
 in.Ndt = round(in.simtime/in.dt,-1);
 in.anisoNdt =in.Ndt - in.precycle;
 
-% ___ time steps when output takes place
+%__ select appropriate integer type for time steps depending on Ndt
+inttypes = {'int16','int32','int64'};
+intmaxs = cell2mat(cellfun(@(x) int64(intmax(x)),inttypes,'UniformOutput',false)');
+ind_inttype = min(find(in.Ndt<=intmaxs));
 if in.ctrcnt>in.Ndt
-    in.tsteptsctr = int16(1:in.Ndt);
+%     in.tsteptsctr = int16(1:in.Ndt);
+    in.tsteptsctr = eval([inttypes{ind_inttype} '(1:in.Ndt)']);
     warning('in.ctrcnt>in.Ndt, output length set to in.Ndt')
 else
-    in.tsteptsctr = int16(floor(linspace(1,in.Ndt,in.ctrcnt)));
+%     in.tsteptsctr = int16(floor(linspace(1,in.Ndt,in.ctrcnt)));
+    in.tsteptsctr = eval([inttypes{ind_inttype} '(floor(linspace(1,in.Ndt,in.ctrcnt)))']);
 end
     
 % ___ time steps when phase fields are saved
@@ -140,7 +145,7 @@ end % func
 
 %% Assign_nOP_from_ICcode
 function nOP = Assign_nOP_from_ICcode(ICcode)
-    codes2OP = {'CircleInMatrix','VerticalPlane','LoadContour','TiltedPlane','TiltedPlaneAng','VerticalSlab','EllipseInMatrix','RectangleInMatrix','Wulff_weak','EAVarAng'};
+    codes2OP = {'CircleInMatrix','VerticalPlane','LoadContour','TiltedPlane','TiltedPlaneAng','VerticalSlab','EllipseInMatrix','RectangleInMatrix','Wulff_weak','EAVarAng','Wulff'};
     codes3OP = {'3junctions','SemiCircleOnPlane', 'SemiCircleOnPlaneDiffuse' ,'Tjunction','2CirclesInMatrix'};
     codes4OP = {'SemiCircleOnTjunction','SemiCircleOnTjunctionDiffuse','TestEnergyCalc_4PFs','3CirclesInMatrix'};
     if any(strcmp(ICcode,codes2OP))
