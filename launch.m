@@ -9,7 +9,7 @@
 
 %% EXAMPLE - run a custom simulation defined in make_input.m
 clear 
-addpath('input\','solver\')
+addpath('input\','solver\','processing\')
 
 % ___ creates input file 'in', type 'help make_input' for details
 in = make_input;
@@ -31,7 +31,7 @@ imagesc(pctr{2}), colorbar
 % ___ in 'input\examples\' are ready-made input files with sample simulations
 % of the four experiments from the Paper
 clear
-addpath('input\examples\','solver\','input\')
+addpath('input\examples\','solver\','input\','processing\')
 
 % ___ uncomment the line corresponding to the simulation to be run
 % in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
@@ -65,7 +65,7 @@ IEinit = determineIEinit(IEminmax,IEs,model);
 % ___ usage of supplementary get_sim_timeline function
 
 clear
-addpath('input\examples\','solver\','input\')
+addpath('input\examples\','solver\','input\','processing\')
 
 in = input_shrinking_circles; % IWvK, IEtop = 0.3IEbot, IEbot = 0.3 J/m^2
 in.plotcond = false; % turn off plotting during simulation
@@ -84,5 +84,44 @@ figure(1)
     ylabel('area fraction')
     legend('matrix','bottom circle','top circle','Location','east')
 
+%% EXAMPLE - time evolution of match to Wulff shape
+clear
+addpath('input\examples\','solver\','input\','processing\')
+
+% __ generate input structure
+in = input_wulff; % IWvK, Omega=5, fourfold
+% __ modify input to be returned phase fields in time-equidistant checkpoints
+in.outputAtChckpt{1} = true;
+% __ set number of the checkpoints
+in.outputAtChckpt{2} = 15;
+
+% ___ compute model parameters and time step
+in = input_calc_PFpar_dt(in);
+% ___ run the simulation
+[pctr,S,F,in] = run_simulation(in);
+
+% __ set the polar angles (rad) to have the contour interpolated into (column vector)
+phi = linspace(-pi,pi,500);
+phi = phi';
+% 
+if in.outputAtChckpt{1}
+    for k = 1:length(pctr)
+        [XYcentroid(k,:), RW(k,:) ,r_contour(:,k), norm_sum_squared_diff(k,1),HausdorffD(k,1)] = GetContourAndCompareToWulff(pctr{k}{2}-pctr{k}{1}, phi, in, false);
+    end
+
+else
+    [XYcentroid, RW ,r_contour, norm_sum_squared_diff,HausdorffD] = GetContourAndCompareToWulff(pctr{2}-pctr{1}, th, in, false);
+end
+
+% ___ extract the simulation time from the input associated with output
+% checkpoints
+[t_ctr, t_ctr_p]= get_sim_timeline(in);
+
+% __ visualize the results in the simulation time
+figure(2)
+    plot(t_ctr_p,HausdorffD,'o-')
+    xlabel('time (s)')
+    ylabel('Hausdorff Distance (-)')
+%     legend('matrix','bottom circle','top circle','Location','east')
 
 
