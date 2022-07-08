@@ -21,7 +21,7 @@ function input = input_wulff
 Nx = 100; % number of grid points in x direction
 Ny = 100; % number of grid points in y direction
 precycle = 20; % needed for inclination-dependent simulations. Number of time steps run with isotorpic model to make interface a little diffuse
-simtime = 0.03; % simulation time in seconds
+simtime = 0.02; % simulation time in seconds
 
 IW = 1e-9; % minimal inteface width in meters
 IWpts = 7; % number of points in the interface
@@ -68,13 +68,12 @@ PlotAftertstep = Inf; % after selected timestep will plot at every timestep
 %       inclination dep. mobility
 %% INITIAL CONDITION: 2 PHASE FIELDS
 %___ 'CircleInMatrix' ... ICparam = [centerx centery radius]
-ICcode = 'CircleInMatrix';
-ICparam = [Nx/2 , Nx/2 , Nx/3];
+% ICcode = 'CircleInMatrix';
+% ICparam = [Nx/2 , Nx/2 , Nx/3];
 
-% ___ 'Wulff_weak' ... ICparam = [center_x , center_y , radius , Omega], Omega<=1
-% ICcode = 'Wulff_weak';
-% ICparam = [0.5*Nx 0.5001*Ny Nx/3 0.95];
-% ICparam = [0.5*Nx 1.001 Ny*2/3 0.7];
+% ___ 'Wulff' ... ICparam = [center_x , center_y , radius , Omega]
+ICcode = 'Wulff';
+ICparam = [0.501*Nx 0.501*Ny Nx/3 5];
 
 % ___ uncomment and modify if 2 phase fields are to be used
 PFori = [0,0]*(pi/180); % orientation of the PF [1,2,3,...]
@@ -165,7 +164,7 @@ end%func
 
 %% Assign_nOP_from_ICcode
 function nOP = Assign_nOP_from_ICcode(ICcode)
-    codes2OP = {'CircleInMatrix','Wulff_weak'};
+    codes2OP = {'CircleInMatrix','Wulff'};
     codes3OP = {'Tjunction','2CirclesInMatrix'};
     if any(strcmp(ICcode,codes2OP))
         nOP = 2;

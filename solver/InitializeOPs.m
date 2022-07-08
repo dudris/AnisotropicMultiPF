@@ -40,27 +40,30 @@ function p = InitializeOPs(in,showIC)
                     radius = param(3);
                     condINIT= sqrt((Y-center(2)).^2+ (X-center(1)).^2) <= radius;
 
-                case 'Wulff_weak'
+                case 'Wulff'
                     assert(length(param)==4,'wrong number of InitializeOPs defining parameters')
                     center = [ param(1), param(2)];
-                    mean_radius = param(3);
+                    radius_W = param(3);
                     Omega = param(4);
                     soaIE = Omega/(in.intf.params_incl_dep.nfold^2-1);
                     if ~isfield(in.intf.params_incl_dep,'offset_ang') % if offset_ang is not one of fields in params_incl_dep
                         in.intf.params_incl_dep.offset_ang = in.misori(1); % implying new input including misorientation
                     end
-                    offset_ang_included = false;
+                    ba_ncnvx = border_angles(in.intf.params_incl_dep,false);
+%                         ba_ncnvx = border_angles_v2(in.intf.params_incl_dep,'forbb',false);
+                    ba_ncnvx = rotate_to_first_inetrval(ba_ncnvx,in.intf.params_incl_dep.offset_ang);
+                    [th_allwd_ncnvx, ~] = GetAllowedAngles(ba_ncnvx,100,false);
+                    th_mod = th_allwd_ncnvx;
+                    offset_ang_included = true;
                     [fIEijfun,dfIEijfun,~] = AssignAnisotropyFunction(in.intf.params_incl_dep,offset_ang_included);
-                    th = linspace(-pi,pi,300);
-                    th = th';
-                    % rotate the wulff plot 
-%                     th_wulff = rotate_to_first_inetrval(th,-results_entry.offset_ang); % not sure why this takes the negative of offset ang
-                    wx = mean_radius*( fIEijfun(th,soaIE).*cos(th) - dfIEijfun(th,soaIE).*sin(th) );
-                    wy = mean_radius*( fIEijfun(th,soaIE).*sin(th) + dfIEijfun(th,soaIE).*cos(th) );
-%                     TH = reshape(atan2(Y,X),[numel(X),1]);
+                    wx =  radius_W * ( fIEijfun(th_mod,soaIE).*cos(th_mod) - dfIEijfun(th_mod,soaIE).*sin(th_mod) );
+                    wy =  radius_W * (fIEijfun(th_mod,soaIE).*sin(th_mod) + dfIEijfun(th_mod,soaIE).*cos(th_mod) );
+%                         figure(33),plot(wx,wy,'o'),axis equal
+
                     [TH,R] = cart2pol(X-center(1),Y-center(2));
-                    % rotate the WUlff shape and 
-                    TH_W = rotate_to_first_inetrval(TH(:),-in.misori(1));
+                    TH(isnan(TH)) = pi;
+%                         TH_W = rotate_to_first_inetrval(reshape(TH,[numel(X),1]),-in.intf.params_incl_dep.offset_ang);
+                    TH_W = rotate_to_first_inetrval(reshape(TH,[numel(X),1]),0);
                     RW = CalcRadiusFromXYcontour([wx,wy],TH_W);
                     RW = reshape(RW,[Ny,Nx]);
                     condINIT = R<=RW;
