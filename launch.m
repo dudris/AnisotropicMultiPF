@@ -84,16 +84,25 @@ figure(1)
     ylabel('area fraction')
     legend('matrix','bottom circle','top circle','Location','east')
 
-%% EXAMPLE - time evolution of match to Wulff shape
+%% EXAMPLE - time evolution of match to Wulff shape and the shrinkage rate
 clear
 addpath('input\examples\','solver\','input\','processing\')
 
 % __ generate input structure
-in = input_wulff; % IWvK, Omega=5, fourfold
+in = input_wulff; % IWvK
 % __ modify input to be returned phase fields in time-equidistant checkpoints
 in.outputAtChckpt{1} = true;
 % __ set number of the checkpoints
-in.outputAtChckpt{2} = 15;
+in.outputAtChckpt{2} = 10;
+
+% __ to turn the on-the-fly plotting off
+in.plotcond = false;
+
+% __ set the desired normalized strength of anisotropy Omega to value 0-7.5
+Omega = 5; 
+in.intf.params_incl_dep.Omega = Omega; % anisotropy of interface energy
+in.intf.params_incl_dep.soaIE = Omega/(4^2-1); % denoted delta in the paper
+in.ICparam(4) = Omega; % set the strength of anisotropy of the initial shape
 
 % ___ compute model parameters and time step
 in = input_calc_PFpar_dt(in);
@@ -103,14 +112,10 @@ in = input_calc_PFpar_dt(in);
 % __ set the polar angles (rad) to have the contour interpolated into (column vector)
 phi = linspace(-pi,pi,500);
 phi = phi';
-% 
-if in.outputAtChckpt{1}
-    for k = 1:length(pctr)
-        [XYcentroid(k,:), RW(k,:) ,r_contour(:,k), norm_sum_squared_diff(k,1),HausdorffD(k,1)] = GetContourAndCompareToWulff(pctr{k}{2}-pctr{k}{1}, phi, in, false);
-    end
-
-else
-    [XYcentroid, RW ,r_contour, norm_sum_squared_diff,HausdorffD] = GetContourAndCompareToWulff(pctr{2}-pctr{1}, th, in, false);
+% __ process the contours in the checkpoints
+% __ type 'help GetContourAndCompareToWulff'
+for k = 1:length(pctr)
+    [XYcentroid(k,:), RW(k,:) ,r_contour(:,k), norm_sum_squared_diff(k,1),HausdorffD(k,1)] = GetContourAndCompareToWulff(pctr{k}{2}-pctr{k}{1}, phi, in, false);
 end
 
 % ___ extract the simulation time from the input associated with output
@@ -119,9 +124,20 @@ end
 
 % __ visualize the results in the simulation time
 figure(2)
+    subplot(121)
     plot(t_ctr_p,HausdorffD,'o-')
     xlabel('time (s)')
     ylabel('Hausdorff Distance (-)')
 %     legend('matrix','bottom circle','top circle','Location','east')
-
+    
+    subplot(122)
+    domarea = in.Nx^2*in.dx^2;
+    dAdt = domarea*diff(S(:,2))./diff(t_ctr);
+    plot(t_ctr(2:end),dAdt,'-')
+    CW = polyval([-0.00032,0.00639,-0.04219,0.00034,1.00000],Omega)/(1-in.intf.params_incl_dep.soaIE);
+    dAdt_anal = -2*pi*in.GBmobility*in.IE*CW;
+    hold on
+    plot(t_ctr([1,end]),ones(1,2)*dAdt_anal,'k--')
+    hold off
+    ylim([-inf,-5e-16])
 
