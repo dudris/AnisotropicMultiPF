@@ -99,6 +99,8 @@ in.outputAtChckpt{2} = 10;
 in.plotcond = false;
 
 % __ set the desired normalized strength of anisotropy Omega to value 0-7.5
+% __ note that with increased Omega, the initial shape has smaller area for
+% constant radius, to be set under in.ICparam(3)
 Omega = 5; 
 in.intf.params_incl_dep.Omega = Omega; % anisotropy of interface energy
 in.intf.params_incl_dep.soaIE = Omega/(4^2-1); % denoted delta in the paper
@@ -140,4 +142,4 @@ figure(2)
     plot(t_ctr([1,end]),ones(1,2)*dAdt_anal,'k--')
     hold off
     ylim([-inf,-5e-16])
-
+    legend('shrinkage rate','analytic')
