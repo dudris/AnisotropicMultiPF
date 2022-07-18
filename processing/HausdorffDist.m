@@ -1,3 +1,10 @@
+%% copyright notice
+% This file is part of a dataset <Minar, Martin (2022), “Benchmarking of different strategies to include anisotropy in a curvature-driven multi-phase-field model”, Mendeley Data, V2, doi: 10.17632/5wrv3ky9pp.2> 
+% coupled to publication of the same name by Minar, Moelans submitted to Physical Review Materials in January 2022.
+% Distributed under GPLv3 license.
+% This project has received funding from the European Research Council (ERC) under the European Union's 
+% Horizon 2020 research and innovation programme (grant agreement n° 714754).
+% 
 function [hd D] = HausdorffDist(P,Q,lmf,dv)
 % source: Zachary Danziger (2022). Hausdorff Distance (https://www.mathworks.com/matlabcentral/fileexchange/26738-hausdorff-distance), MATLAB Central File Exchange. Retrieved May 26, 2022. 
 % Calculates the Hausdorff Distance between P and Q
